@@ -15,3 +15,6 @@ class BadRequestException(message: String) :
 
 class UnauthorizedException(message: String) :
     ApiException(HttpStatus.UNAUTHORIZED, message)
+
+class ForbiddenException(message: String) :
+    ApiException(HttpStatus.FORBIDDEN, message)

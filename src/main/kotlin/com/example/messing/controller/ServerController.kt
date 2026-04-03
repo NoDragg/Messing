@@ -72,4 +72,13 @@ class ServerController(
         val url = serverService.updateServerAvatar(serverId, file, authentication.name)
         return ResponseEntity.ok(UploadImageResponse(url = url))
     }
+
+    @DeleteMapping("/{serverId}")
+    fun deleteServer(
+        @PathVariable serverId: String,
+        authentication: Authentication
+    ): ResponseEntity<Void> {
+        serverService.deleteServer(serverId, authentication.name)
+        return ResponseEntity.noContent().build()
+    }
 }

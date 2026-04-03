@@ -10,4 +10,5 @@ interface ServerInviteRepository : JpaRepository<ServerInvite, String> {
     fun existsByCode(code: String): Boolean
     fun findByCode(code: String): ServerInvite?
     fun deleteByExpiresAtBefore(expiresAt: Instant): Long
+    fun deleteAllByServerId(serverId: String)
 }

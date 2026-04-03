@@ -7,6 +7,7 @@ import com.example.messing.dto.server.InviteMemberRequest
 import com.example.messing.dto.server.ServerResponse
 import com.example.messing.entity.*
 import com.example.messing.exception.BadRequestException
+import com.example.messing.exception.ForbiddenException
 import com.example.messing.exception.ResourceNotFoundException
 import com.example.messing.repository.ChannelRepository
 import com.example.messing.repository.ServerInviteRepository
@@ -195,6 +196,24 @@ class ServerService(
         serverRepository.save(server)
 
         return iconUrl
+    }
+
+    @Transactional
+    fun deleteServer(serverId: String, currentUserEmail: String) {
+        val user = userRepository.findByEmail(currentUserEmail)
+            ?: throw ResourceNotFoundException("User not found")
+
+        val server = serverRepository.findById(serverId)
+            .orElseThrow { ResourceNotFoundException("Server not found") }
+
+        if (server.owner?.id != user.id) {
+            throw ForbiddenException("Chỉ owner của server mới có quyền xóa server")
+        }
+
+        // Delete all invites for this server
+        serverInviteRepository.deleteAllByServerId(serverId)
+
+        serverRepository.delete(server)
     }
 
     private fun generateUniqueInviteCode(length: Int = 6): String {
