@@ -17,6 +17,10 @@ class Message(
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     var content: String = "",
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 20)
+    var type: MessageType = MessageType.TEXT,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),
 

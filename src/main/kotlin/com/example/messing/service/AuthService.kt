@@ -29,9 +29,13 @@ class AuthService(
         if (userRepository.existsByUsername(request.username)) {
             throw BadRequestException("Username already exists")
         }
+        if (userRepository.existsByLoginName(request.loginName)) {
+            throw BadRequestException("Login name already exists")
+        }
 
         val user = User(
             username = request.username,
+            loginName = request.loginName,
             email = request.email,
             password = passwordEncoder.encode(request.password) ?: ""
         )
@@ -44,16 +48,17 @@ class AuthService(
             token = token,
             userId = savedUser.id!!,
             username = savedUser.username,
+            loginName = savedUser.loginName,
             email = savedUser.email
         )
     }
 
     fun login(request: LoginRequest): AuthResponse {
         authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken(request.email, request.password)
+            UsernamePasswordAuthenticationToken(request.identifier, request.password)
         )
 
-        val user = userRepository.findByEmail(request.email)
+        val user = userRepository.findByEmailOrLoginName(request.identifier, request.identifier)
             ?: throw BadRequestException("Invalid credentials")
 
         val userDetails: UserDetails = userDetailsService.loadUserByUsername(user.email)
@@ -63,6 +68,7 @@ class AuthService(
             token = token,
             userId = user.id!!,
             username = user.username,
+            loginName = user.loginName,
             email = user.email
         )
     }

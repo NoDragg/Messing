@@ -15,6 +15,7 @@ import com.example.messing.repository.ServerRepository
 import com.example.messing.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.multipart.MultipartFile
 import java.security.SecureRandom
 import java.time.Instant
 
@@ -24,7 +25,8 @@ class ServerService(
     private val serverMemberRepository: ServerMemberRepository,
     private val channelRepository: ChannelRepository,
     private val userRepository: UserRepository,
-    private val serverInviteRepository: ServerInviteRepository
+    private val serverInviteRepository: ServerInviteRepository,
+    private val fileStorageService: FileStorageService
 ) {
 
     private val inviteAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
@@ -170,6 +172,29 @@ class ServerService(
                 ?: throw ResourceNotFoundException("Server not found")
             ServerResponse.from(server)
         }
+    }
+
+    @Transactional
+    fun updateServerAvatar(serverId: String, file: MultipartFile, currentUserEmail: String): String {
+        val requester = userRepository.findByEmail(currentUserEmail)
+            ?: throw ResourceNotFoundException("User not found")
+
+        val membership = serverMemberRepository.findByUserIdAndServerId(requester.id!!, serverId)
+            ?: throw BadRequestException("Bạn không phải thành viên của server này")
+
+        if (membership.role != MemberRole.OWNER && membership.role != MemberRole.ADMIN) {
+            throw BadRequestException("Bạn không có quyền đổi ảnh đại diện server")
+        }
+
+        val server = serverRepository.findById(serverId).orElseThrow {
+            ResourceNotFoundException("Server not found")
+        }
+
+        val iconUrl = fileStorageService.storeAvatar(file, "servers")
+        server.iconUrl = iconUrl
+        serverRepository.save(server)
+
+        return iconUrl
     }
 
     private fun generateUniqueInviteCode(length: Int = 6): String {

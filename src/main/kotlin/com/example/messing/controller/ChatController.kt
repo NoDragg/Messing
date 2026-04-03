@@ -3,6 +3,7 @@ package com.example.messing.controller
 import com.example.messing.dto.message.ChatMessageRequest
 import com.example.messing.dto.message.ChatMessageResponse
 import com.example.messing.entity.Message
+import com.example.messing.entity.MessageType
 import com.example.messing.exception.ResourceNotFoundException
 import com.example.messing.repository.ChannelRepository
 import com.example.messing.repository.MessageRepository
@@ -39,6 +40,7 @@ class ChatController(
         val savedMessage = messageRepository.save(
             Message(
                 content = request.content,
+                type = MessageType.TEXT,
                 sender = sender,
                 channel = channel
             )
@@ -48,6 +50,7 @@ class ChatController(
             id = savedMessage.id ?: throw IllegalStateException("Saved message id is null"),
             channelId = channel.id ?: channelId,
             content = savedMessage.content,
+            type = savedMessage.type,
             createdAt = savedMessage.createdAt,
             senderId = sender.id ?: throw IllegalStateException("Sender id is null"),
             senderUsername = sender.username,
