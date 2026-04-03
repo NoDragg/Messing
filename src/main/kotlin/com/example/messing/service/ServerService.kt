@@ -190,7 +190,7 @@ class ServerService(
             ResourceNotFoundException("Server not found")
         }
 
-        val iconUrl = fileStorageService.storeAvatar(file, "servers")
+        val iconUrl = fileStorageService.storeCircularAvatar(file, "servers")
         server.iconUrl = iconUrl
         serverRepository.save(server)
 

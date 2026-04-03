@@ -73,7 +73,7 @@ class MessageRestController(
             ResourceNotFoundException("Channel not found")
         }
 
-        val imageUrl = fileStorageService.storeAvatar(file, "messages")
+        val imageUrl = fileStorageService.storeChatImage(file, "messages")
 
         val savedMessage = messageRepository.save(
             Message(

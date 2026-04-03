@@ -17,7 +17,7 @@ class UserProfileService(
         val user = userRepository.findByEmail(currentUserEmail)
             ?: throw ResourceNotFoundException("User not found")
 
-        val avatarUrl = fileStorageService.storeAvatar(file, "users")
+        val avatarUrl = fileStorageService.storeCircularAvatar(file, "users")
         user.avatarUrl = avatarUrl
         userRepository.save(user)
 
