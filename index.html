@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Real-time Chat STOMP Tester</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 24px;
+      background: #f7f7fb;
+      color: #1f2937;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 22px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 260px;
+      resize: vertical;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: Consolas, monospace;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0 14px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn-connect { background: #2563eb; color: white; }
+    .btn-disconnect { background: #6b7280; color: white; }
+    .btn-send { background: #059669; color: white; }
+    .hint {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>STOMP WebSocket Tester (/ws)</h1>
+
+    <div class="row">
+      <label for="baseUrl">Base URL</label>
+      <input id="baseUrl" type="text" value="http://localhost:8080" placeholder="http://localhost:8080" />
+    </div>
+
+    <div class="row">
+      <label for="token">JWT Token</label>
+      <input id="token" type="text" placeholder="eyJhbGciOi..." />
+    </div>
+
+    <div class="row">
+      <label for="channelId">Channel ID</label>
+      <input id="channelId" type="text" placeholder="channel-uuid" />
+    </div>
+
+    <div class="actions">
+      <button class="btn-connect" onclick="connect()">Connect</button>
+      <button class="btn-disconnect" onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="row">
+      <label for="message">Message</label>
+      <input id="message" type="text" placeholder="Hello" />
+    </div>
+
+    <div class="actions">
+      <button class="btn-send" onclick="sendMessage()">Send</button>
+    </div>
+
+    <div class="hint">
+      Subscribe destination: <b>/topic/channels/{channelId}</b> | Send destination: <b>/app/chat/{channelId}/sendMessage</b>
+    </div>
+
+    <div class="row" style="grid-template-columns: 1fr;">
+      <label for="logs">Logs</label>
+      <textarea id="logs" readonly></textarea>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+
+  <script>
+    let stompClient = null;
+    let subscription = null;
+
+    function log(msg) {
+      const logs = document.getElementById('logs');
+      const ts = new Date().toISOString();
+      logs.value += `[${ts}] ${msg}\n`;
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function getInputs() {
+      const baseUrl = document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+      const token = document.getElementById('token').value.trim();
+      const channelId = document.getElementById('channelId').value.trim();
+      return { baseUrl, token, channelId };
+    }
+
+    function connect() {
+      const { baseUrl, token, channelId } = getInputs();
+
+      if (!baseUrl || !channelId || !token) {
+        log('ERROR: baseUrl, token, channelId are required.');
+        return;
+      }
+
+      if (stompClient && stompClient.connected) {
+        log('Already connected. Disconnect first if you want to switch channel.');
+        return;
+      }
+
+      const socketUrl = `${baseUrl}/ws`;
+      log(`Connecting to ${socketUrl} ...`);
+
+      stompClient = new StompJs.Client({
+        webSocketFactory: () => new SockJS(socketUrl),
+        reconnectDelay: 0,
+        connectHeaders: {
+          Authorization: `Bearer ${token}`,
+          'X-Authorization': `Bearer ${token}`
+        },
+        debug: (str) => log(`[STOMP DEBUG] ${str}`),
+        onConnect: () => {
+          log('Connected successfully.');
+          const destination = `/topic/channels/${channelId}`;
+
+          subscription = stompClient.subscribe(destination, (frame) => {
+            try {
+              const data = JSON.parse(frame.body);
+              log(`[MESSAGE RECEIVED] ${JSON.stringify(data)}`);
+            } catch (e) {
+              log(`[MESSAGE RECEIVED - RAW] ${frame.body}`);
+            }
+          });
+
+          log(`Subscribed to ${destination}`);
+        },
+        onStompError: (frame) => {
+          log(`[STOMP ERROR] ${frame.headers['message'] || 'Unknown broker error'}`);
+          log(`[STOMP ERROR DETAIL] ${frame.body || '(empty body)'}`);
+        },
+        onWebSocketError: (event) => {
+          log(`[WS ERROR] ${event?.message || JSON.stringify(event)}`);
+        },
+        onWebSocketClose: (event) => {
+          log(`[WS CLOSED] code=${event.code}, reason=${event.reason || 'N/A'}`);
+        },
+        onDisconnect: () => {
+          log('Disconnected from broker.');
+        }
+      });
+
+      stompClient.activate();
+    }
+
+    function sendMessage() {
+      const { channelId } = getInputs();
+      const content = document.getElementById('message').value.trim();
+
+      if (!stompClient || !stompClient.connected) {
+        log('ERROR: Not connected. Click Connect first.');
+        return;
+      }
+
+      if (!channelId || !content) {
+        log('ERROR: channelId and message content are required.');
+        return;
+      }
+
+      const destination = `/app/chat/${channelId}/sendMessage`;
+      const payload = { content };
+
+      stompClient.publish({
+        destination,
+        body: JSON.stringify(payload),
+        headers: { 'content-type': 'application/json' }
+      });
+
+      log(`[MESSAGE SENT] destination=${destination}, payload=${JSON.stringify(payload)}`);
+      document.getElementById('message').value = '';
+    }
+
+    function disconnect() {
+      if (!stompClient) {
+        log('No active STOMP client.');
+        return;
+      }
+
+      if (subscription) {
+        try {
+          subscription.unsubscribe();
+          log('Unsubscribed current channel.');
+        } catch (e) {
+          log(`Unsubscribe error: ${e.message}`);
+        }
+        subscription = null;
+      }
+
+      stompClient.deactivate();
+      stompClient = null;
+      log('Disconnect requested.');
+    }
+  </script>
+</body>
+</html>
