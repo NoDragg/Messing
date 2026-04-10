@@ -4,9 +4,7 @@ import com.example.messing.exception.BadRequestException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
-import java.awt.AlphaComposite
 import java.awt.RenderingHints
-import java.awt.geom.Ellipse2D
 import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,8 +29,8 @@ class FileStorageService(
             ImageIO.read(input)
         } ?: throw BadRequestException("Không đọc được dữ liệu ảnh")
 
-        val circularImage = cropToCircle(sourceImage)
-        val resizedCircularImage = resizeImage(circularImage, avatarSizePx, avatarSizePx)
+        val squareImage = cropToSquare(sourceImage)
+        val resizedSquareImage = resizeImage(squareImage, avatarSizePx, avatarSizePx)
 
         val targetDir = baseUploadPath.resolve(folder).normalize()
         Files.createDirectories(targetDir)
@@ -40,7 +38,7 @@ class FileStorageService(
         val fileName = "${UUID.randomUUID()}.png"
         val targetPath = targetDir.resolve(fileName)
 
-        ImageIO.write(resizedCircularImage, "png", targetPath.toFile())
+        ImageIO.write(resizedSquareImage, "png", targetPath.toFile())
 
         return "${publicBaseUrl.trimEnd('/')}/media/$folder/$fileName"
     }
@@ -67,22 +65,12 @@ class FileStorageService(
         return "${publicBaseUrl.trimEnd('/')}/media/$folder/$fileName"
     }
 
-    private fun cropToCircle(image: BufferedImage): BufferedImage {
+    private fun cropToSquare(image: BufferedImage): BufferedImage {
         val size = minOf(image.width, image.height)
         val x = (image.width - size) / 2
         val y = (image.height - size) / 2
 
-        val square = image.getSubimage(x, y, size, size)
-        val output = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
-
-        val g2 = output.createGraphics()
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-        g2.clip = Ellipse2D.Float(0f, 0f, size.toFloat(), size.toFloat())
-        g2.composite = AlphaComposite.SrcOver
-        g2.drawImage(square, 0, 0, null)
-        g2.dispose()
-
-        return output
+        return image.getSubimage(x, y, size, size)
     }
 
     private fun resizeImage(source: BufferedImage, width: Int, height: Int): BufferedImage {

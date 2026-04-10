@@ -15,7 +15,6 @@ class UserController(
     private val userProfileService: UserProfileService
 ) {
 
-
     @GetMapping("/me/profile")
     fun getMyProfile(authentication: Authentication): ResponseEntity<UserProfileResponse> {
         val profile = userProfileService.getMyProfile(authentication.name)

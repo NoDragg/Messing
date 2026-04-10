@@ -31,6 +31,7 @@ class UserProfileService(
         )
     }
 
+
     @Transactional
     fun updateMyProfile(request: UpdateProfileRequest, currentUserEmail: String): UserProfileResponse {
         val user = userRepository.findByEmail(currentUserEmail)

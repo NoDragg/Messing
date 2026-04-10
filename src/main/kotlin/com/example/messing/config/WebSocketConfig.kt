@@ -21,8 +21,9 @@ class WebSocketConfig(
     }
 
     override fun configureMessageBroker(registry: MessageBrokerRegistry) {
-        registry.enableSimpleBroker("/topic")
+        registry.enableSimpleBroker("/topic", "/queue")
         registry.setApplicationDestinationPrefixes("/app")
+        registry.setUserDestinationPrefix("/user")
     }
 
     override fun configureClientInboundChannel(registration: ChannelRegistration) {

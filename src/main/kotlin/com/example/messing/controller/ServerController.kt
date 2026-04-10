@@ -6,6 +6,7 @@ import com.example.messing.dto.server.CreateServerRequest
 import com.example.messing.dto.server.InviteAcceptResponse
 import com.example.messing.dto.server.InviteMemberRequest
 import com.example.messing.dto.server.ServerResponse
+import com.example.messing.dto.server.UpdateServerRequest
 import com.example.messing.service.ServerService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -71,6 +72,20 @@ class ServerController(
     ): ResponseEntity<UploadImageResponse> {
         val url = serverService.updateServerAvatar(serverId, file, authentication.name)
         return ResponseEntity.ok(UploadImageResponse(url = url))
+    }
+
+    @PutMapping("/{serverId}")
+    fun updateServer(
+        @PathVariable serverId: String,
+        @Valid @RequestBody request: UpdateServerRequest,
+        authentication: Authentication
+    ): ResponseEntity<ServerResponse> {
+        val response = serverService.updateServer(
+            serverId = serverId,
+            request = request,
+            currentUserEmail = authentication.name
+        )
+        return ResponseEntity.ok(response)
     }
 
     @DeleteMapping("/{serverId}")

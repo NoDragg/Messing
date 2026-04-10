@@ -5,6 +5,7 @@ import com.example.messing.dto.server.CreateServerRequest
 import com.example.messing.dto.server.InviteAcceptResponse
 import com.example.messing.dto.server.InviteMemberRequest
 import com.example.messing.dto.server.ServerResponse
+import com.example.messing.dto.server.UpdateServerRequest
 import com.example.messing.entity.*
 import com.example.messing.exception.BadRequestException
 import com.example.messing.exception.ForbiddenException
@@ -196,6 +197,24 @@ class ServerService(
         serverRepository.save(server)
 
         return iconUrl
+    }
+
+    @Transactional
+    fun updateServer(serverId: String, request: UpdateServerRequest, currentUserEmail: String): ServerResponse {
+        val user = userRepository.findByEmail(currentUserEmail)
+            ?: throw ResourceNotFoundException("User not found")
+
+        val server = serverRepository.findById(serverId)
+            .orElseThrow { ResourceNotFoundException("Server not found") }
+
+        if (server.owner?.id != user.id) {
+            throw ForbiddenException("Chỉ owner của server mới có quyền chỉnh sửa server")
+        }
+
+        server.name = request.name.trim()
+        val updated = serverRepository.save(server)
+
+        return ServerResponse.from(updated)
     }
 
     @Transactional
