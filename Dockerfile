@@ -28,8 +28,8 @@ RUN ./mvnw clean package -DskipTests
 # ==============================
 # STAGE 2: Runtime nhẹ để chạy app
 # ==============================
-# Runtime image tối giản, giảm bề mặt tấn công và số lượng CVE
-FROM gcr.io/distroless/java22-debian12:nonroot
+# Runtime image dùng JRE 22 hợp lệ (phù hợp app build bằng Java 22)
+FROM eclipse-temurin:22-jre-jammy
 
 WORKDIR /app
 
@@ -39,6 +39,9 @@ COPY --from=builder /app/target/*.jar app.jar
 # App Spring Boot chạy cổng 8080
 EXPOSE 8080
 
-# Distroless nonroot đã chạy bằng user không phải root
+# Tạo user không phải root để tăng bảo mật
+RUN useradd -m appuser
+USER appuser
+
 # Lệnh khởi động container
 ENTRYPOINT ["java", "-Xmx384m", "-Xms256m", "-jar", "app.jar"]
