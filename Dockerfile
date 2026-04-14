@@ -21,6 +21,10 @@ RUN ./mvnw dependency:go-offline
 # Copy source code backend
 COPY src ./src
 
+# Đảm bảo thư mục GraphQL schema luôn tồn tại trong môi trường Docker
+# (thư mục rỗng có thể không được Git track, làm plugin fail)
+RUN mkdir -p src/main/resources/graphql-client
+
 # Build file jar (bỏ test cho nhanh khi build image)
 RUN ./mvnw clean package -DskipTests
 
