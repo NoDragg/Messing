@@ -1,5 +1,7 @@
 package com.example.messing.service
 
+import com.cloudinary.Cloudinary
+import com.cloudinary.utils.ObjectUtils
 import com.example.messing.exception.BadRequestException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -17,10 +19,33 @@ import javax.imageio.ImageIO
 class FileStorageService(
     @Value("\${app.upload-dir:uploads}") uploadDir: String,
     @Value("\${app.public-base-url:http://localhost:8080}") private val publicBaseUrl: String,
-    @Value("\${app.avatar-size:256}") private val avatarSizePx: Int
+    @Value("\${app.avatar-size:256}") private val avatarSizePx: Int,
+    @Value("\${app.storage.provider:local}") private val storageProvider: String,
+    @Value("\${app.cloudinary.cloud-name:}") private val cloudName: String,
+    @Value("\${app.cloudinary.api-key:}") private val apiKey: String,
+    @Value("\${app.cloudinary.api-secret:}") private val apiSecret: String
 ) {
 
     private val baseUploadPath: Path = Paths.get(uploadDir).toAbsolutePath().normalize()
+
+    private val cloudinary: Cloudinary? by lazy {
+        if (storageProvider.equals("cloudinary", ignoreCase = true)) {
+            require(cloudName.isNotBlank()) { "Missing app.cloudinary.cloud-name" }
+            require(apiKey.isNotBlank()) { "Missing app.cloudinary.api-key" }
+            require(apiSecret.isNotBlank()) { "Missing app.cloudinary.api-secret" }
+
+            Cloudinary(
+                ObjectUtils.asMap(
+                    "cloud_name", cloudName,
+                    "api_key", apiKey,
+                    "api_secret", apiSecret,
+                    "secure", true
+                )
+            )
+        } else {
+            null
+        }
+    }
 
     fun storeCircularAvatar(file: MultipartFile, folder: String): String {
         validateImage(file)
@@ -32,20 +57,84 @@ class FileStorageService(
         val squareImage = cropToSquare(sourceImage)
         val resizedSquareImage = resizeImage(squareImage, avatarSizePx, avatarSizePx)
 
+        return if (storageProvider.equals("cloudinary", ignoreCase = true)) {
+            uploadAvatarToCloudinary(resizedSquareImage, folder)
+        } else {
+            storeAvatarLocally(resizedSquareImage, folder)
+        }
+    }
+
+    fun storeChatImage(file: MultipartFile, folder: String): String {
+        validateImage(file)
+
+        return if (storageProvider.equals("cloudinary", ignoreCase = true)) {
+            uploadChatImageToCloudinary(file, folder)
+        } else {
+            storeChatImageLocally(file, folder)
+        }
+    }
+
+    private fun uploadAvatarToCloudinary(image: BufferedImage, folder: String): String {
+        val cloudinaryClient = cloudinary ?: throw IllegalStateException("Cloudinary is not initialized")
+
+        val tempFile = Files.createTempFile("avatar-", ".png").toFile()
+        try {
+            ImageIO.write(image, "png", tempFile)
+
+            val result = cloudinaryClient.uploader().upload(
+                tempFile,
+                ObjectUtils.asMap(
+                    "folder", "messing/$folder",
+                    "public_id", UUID.randomUUID().toString(),
+                    "overwrite", true,
+                    "resource_type", "image"
+                )
+            )
+
+            return (result["secure_url"] as? String)
+                ?: throw IllegalStateException("Cloudinary did not return secure_url")
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    private fun uploadChatImageToCloudinary(file: MultipartFile, folder: String): String {
+        val cloudinaryClient = cloudinary ?: throw IllegalStateException("Cloudinary is not initialized")
+
+        val extension = file.originalFilename
+            ?.substringAfterLast('.', "")
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+            ?: "jpg"
+
+        val result = cloudinaryClient.uploader().upload(
+            file.bytes,
+            ObjectUtils.asMap(
+                "folder", "messing/$folder",
+                "public_id", UUID.randomUUID().toString(),
+                "format", extension,
+                "overwrite", true,
+                "resource_type", "image"
+            )
+        )
+
+        return (result["secure_url"] as? String)
+            ?: throw IllegalStateException("Cloudinary did not return secure_url")
+    }
+
+    private fun storeAvatarLocally(image: BufferedImage, folder: String): String {
         val targetDir = baseUploadPath.resolve(folder).normalize()
         Files.createDirectories(targetDir)
 
         val fileName = "${UUID.randomUUID()}.png"
         val targetPath = targetDir.resolve(fileName)
 
-        ImageIO.write(resizedSquareImage, "png", targetPath.toFile())
+        ImageIO.write(image, "png", targetPath.toFile())
 
         return "${publicBaseUrl.trimEnd('/')}/media/$folder/$fileName"
     }
 
-    fun storeChatImage(file: MultipartFile, folder: String): String {
-        validateImage(file)
-
+    private fun storeChatImageLocally(file: MultipartFile, folder: String): String {
         val targetDir = baseUploadPath.resolve(folder).normalize()
         Files.createDirectories(targetDir)
 

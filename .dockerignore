@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# IDE / Editor
+.idea/
+.vscode/
+*.iml
+
+# Build outputs
+target/
+out/
+build/
+
+# Node / frontend artifacts (if present in repo)
+node_modules/
+.next/
+dist/
+coverage/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Docker files not needed in build context (optional)
+docker-compose*.yml
+
+# Documentation and misc
+README.md
+*.md
+
+# Runtime upload data (if local dir exists)
+uploads/
