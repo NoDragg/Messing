@@ -35,3 +35,8 @@ build/
 # Local uploaded media
 uploads/
 media/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example

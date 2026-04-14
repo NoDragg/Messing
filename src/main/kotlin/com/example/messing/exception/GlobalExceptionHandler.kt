@@ -2,6 +2,8 @@ package com.example.messing.exception
 
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
+import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.core.AuthenticationException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -44,6 +46,30 @@ class GlobalExceptionHandler {
             message = message
         )
         return ResponseEntity.badRequest().body(error)
+    }
+
+    @ExceptionHandler(BadCredentialsException::class)
+    fun handleBadCredentials(ex: BadCredentialsException): ResponseEntity<ErrorResponse> {
+        log.warn("Bad credentials: {}", ex.message)
+
+        val error = ErrorResponse(
+            status = 401,
+            error = "Unauthorized",
+            message = "Invalid identifier or password"
+        )
+        return ResponseEntity.status(401).body(error)
+    }
+
+    @ExceptionHandler(AuthenticationException::class)
+    fun handleAuthenticationException(ex: AuthenticationException): ResponseEntity<ErrorResponse> {
+        log.warn("Authentication failed: {}", ex.message)
+
+        val error = ErrorResponse(
+            status = 401,
+            error = "Unauthorized",
+            message = "Authentication failed"
+        )
+        return ResponseEntity.status(401).body(error)
     }
 
     @ExceptionHandler(Exception::class)
