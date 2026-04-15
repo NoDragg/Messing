@@ -36,6 +36,11 @@ build/
 uploads/
 media/
 
+# Env files
+.env
+.env.*
+!.env.example
+
 # Environment / secrets
 .env
 .env.*
