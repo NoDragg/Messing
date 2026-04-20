@@ -29,11 +29,13 @@ class Channel(
 
     // --- Relationships ---
 
+    // Channel luôn thuộc một server cụ thể để giữ tenant boundary rõ ràng.
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "server_id", nullable = false)
     var server: Server? = null,
 
+    // Messages cascade theo channel để dọn sạch lịch sử khi channel bị xóa.
     @JsonIgnore
     @OneToMany(mappedBy = "channel", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     var messages: MutableList<Message> = mutableListOf()

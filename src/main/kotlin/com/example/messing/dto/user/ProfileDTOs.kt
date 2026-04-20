@@ -2,6 +2,7 @@ package com.example.messing.dto.user
 
 import java.time.Instant
 
+// Profile response phục vụ settings page và update UI.
 data class UserProfileResponse(
     val id: String,
     val username: String,

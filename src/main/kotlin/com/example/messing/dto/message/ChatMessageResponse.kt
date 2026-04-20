@@ -3,6 +3,7 @@ package com.example.messing.dto.message
 import com.example.messing.entity.MessageType
 import java.time.Instant
 
+// Response realtime cho chat history và websocket broadcast.
 data class ChatMessageResponse(
     val id: String,
     val channelId: String,

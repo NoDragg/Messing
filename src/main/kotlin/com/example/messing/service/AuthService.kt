@@ -1,6 +1,6 @@
 package com.example.messing.service
 
-import com.example.messing.config.JwtUtil
+import com.example.messing.security.JwtUtil
 import com.example.messing.dto.auth.AuthResponse
 import com.example.messing.dto.auth.LoginRequest
 import com.example.messing.dto.auth.RegisterRequest

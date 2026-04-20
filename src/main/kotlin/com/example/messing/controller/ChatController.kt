@@ -28,10 +28,15 @@ class ChatController(
     fun sendMessage(
         @DestinationVariable channelId: String,
         @Valid @Payload request: ChatMessageRequest,
-        principal: Principal
+        principal: Principal?
     ) {
-        val sender = userRepository.findByEmail(principal.name)
-            ?: throw ResourceNotFoundException("User not found")
+        val principalName = principal?.name
+        if (principalName.isNullOrBlank()) {
+            return
+        }
+
+        val sender = userRepository.findByEmail(principalName)
+            ?: return
 
         val channel = channelRepository.findById(channelId).orElseThrow {
             ResourceNotFoundException("Channel not found")

@@ -4,6 +4,7 @@ import com.example.messing.entity.Channel
 import com.example.messing.entity.ChannelType
 import java.time.Instant
 
+// DTO tối thiểu cho sidebar/list channel, tránh trả về entity graph.
 data class ChannelResponse(
     val id: String,
     val name: String,

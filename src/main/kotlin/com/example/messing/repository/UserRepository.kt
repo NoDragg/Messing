@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository
 @Repository
 interface UserRepository : JpaRepository<User, String> {
 
+    // Identity lookup dùng xuyên suốt auth, profile và websocket principal mapping.
     fun findByEmail(email: String): User?
 
     fun findByUsername(username: String): User?
@@ -15,6 +16,7 @@ interface UserRepository : JpaRepository<User, String> {
 
     fun findByEmailOrLoginName(email: String, loginName: String): User?
 
+    // Duplicate guards cho register flow.
     fun existsByEmail(email: String): Boolean
 
     fun existsByUsername(username: String): Boolean

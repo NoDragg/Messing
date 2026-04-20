@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
+import java.security.Principal
 
 @RestController
 @RequestMapping("/api/channels")
@@ -64,9 +65,10 @@ class MessageRestController(
     fun uploadChannelImage(
         @PathVariable channelId: String,
         @RequestParam("file") file: MultipartFile,
-        authentication: Authentication
+        principal: Principal?
     ): ResponseEntity<UploadChatImageResponse> {
-        val sender = userRepository.findByEmail(authentication.name)
+        val authPrincipal = principal ?: throw ResourceNotFoundException("Unauthorized")
+        val sender = userRepository.findByEmail(authPrincipal.name)
             ?: throw ResourceNotFoundException("User not found")
 
         val channel = channelRepository.findById(channelId).orElseThrow {
