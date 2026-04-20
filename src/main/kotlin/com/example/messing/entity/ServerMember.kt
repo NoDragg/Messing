@@ -26,11 +26,13 @@ class ServerMember(
 
     // --- Relationships ---
 
+    // Role gắn trực tiếp với membership để authorize thao tác theo server.
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     var user: User? = null,
 
+    // Server ref giúp kiểm tra tư cách thành viên và cascade ownership rules.
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "server_id", nullable = false)

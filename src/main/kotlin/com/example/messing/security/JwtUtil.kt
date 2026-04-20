@@ -1,4 +1,4 @@
-package com.example.messing.config
+package com.example.messing.security
 
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts

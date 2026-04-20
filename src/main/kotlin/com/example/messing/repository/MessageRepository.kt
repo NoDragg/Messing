@@ -9,9 +9,12 @@ import org.springframework.stereotype.Repository
 @Repository
 interface MessageRepository : JpaRepository<Message, String> {
 
+    // Timeline theo ascending order cho realtime/render history đơn giản hơn.
     fun findAllByChannelIdOrderByCreatedAtAsc(channelId: String): List<Message>
 
+    // Page-based load cho lịch sử chat khi cần phân trang sâu.
     fun findAllByChannelId(channelId: String, pageable: Pageable): Page<Message>
 
+    // Default fetch ngược thời gian để kéo 50 tin nhắn mới nhất từ API.
     fun findByChannelIdOrderByCreatedAtDesc(channelId: String, pageable: Pageable): Page<Message>
 }

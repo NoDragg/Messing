@@ -3,6 +3,7 @@ package com.example.messing.dto.server
 import com.example.messing.entity.Server
 import java.time.Instant
 
+// DTO gọn cho server list/overview ở FE sidebar.
 data class ServerResponse(
     val id: String,
     val name: String,

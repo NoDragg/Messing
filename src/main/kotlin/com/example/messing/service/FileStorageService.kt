@@ -17,10 +17,10 @@ import javax.imageio.ImageIO
 
 @Service
 class FileStorageService(
-    @Value("\${app.upload-dir:uploads}") uploadDir: String,
-    @Value("\${app.public-base-url:http://localhost:8080}") private val publicBaseUrl: String,
-    @Value("\${app.avatar-size:256}") private val avatarSizePx: Int,
-    @Value("\${app.storage.provider:local}") private val storageProvider: String,
+    @Value("\${app.upload-dir:}") uploadDir: String,
+    @Value("\${app.public-base-url:}") private val publicBaseUrl: String,
+    @Value("\${app.avatar-size:}") private val avatarSizePx: Int,
+    @Value("\${app.storage.provider:}") private val storageProvider: String,
     @Value("\${app.cloudinary.cloud-name:}") private val cloudName: String,
     @Value("\${app.cloudinary.api-key:}") private val apiKey: String,
     @Value("\${app.cloudinary.api-secret:}") private val apiSecret: String
@@ -52,7 +52,7 @@ class FileStorageService(
 
         val sourceImage = file.inputStream.use { input ->
             ImageIO.read(input)
-        } ?: throw BadRequestException("Không đọc được dữ liệu ảnh")
+        } ?: throw BadRequestException("Unable to read image data")
 
         val squareImage = cropToSquare(sourceImage)
         val resizedSquareImage = resizeImage(squareImage, avatarSizePx, avatarSizePx)
@@ -175,12 +175,12 @@ class FileStorageService(
 
     private fun validateImage(file: MultipartFile) {
         if (file.isEmpty) {
-            throw BadRequestException("File ảnh không được để trống")
+            throw BadRequestException("Image file must not be empty")
         }
 
         val contentType = file.contentType ?: ""
         if (!contentType.startsWith("image/")) {
-            throw BadRequestException("Chỉ chấp nhận file ảnh")
+            throw BadRequestException("Only image files are allowed")
         }
     }
 }

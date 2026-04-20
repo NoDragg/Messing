@@ -1,5 +1,6 @@
 package com.example.messing.config
 
+import com.example.messing.security.JwtUtil
 import com.example.messing.service.CustomUserDetailsService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest

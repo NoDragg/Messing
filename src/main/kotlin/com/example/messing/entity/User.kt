@@ -38,10 +38,12 @@ class User(
 
     // --- Relationships ---
 
+    // Memberships giúp xác định user đang thuộc server nào và với vai trò gì.
     @JsonIgnore
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     var serverMembers: MutableList<ServerMember> = mutableListOf(),
 
+    // Messages là lịch sử chat do user gửi, không serialize trực tiếp qua API.
     @JsonIgnore
     @OneToMany(mappedBy = "sender", fetch = FetchType.LAZY)
     var messages: MutableList<Message> = mutableListOf()

@@ -25,14 +25,17 @@ class Server(
 
     // --- Relationships ---
 
+    // Owner là nguồn quyền lực chính cho các thao tác quản trị server.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     var owner: User? = null,
 
+    // Xóa server sẽ cascade xuống toàn bộ channels để tránh dữ liệu mồ côi.
     @JsonIgnore
     @OneToMany(mappedBy = "server", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     var channels: MutableList<Channel> = mutableListOf(),
 
+    // Danh sách members phục vụ kiểm tra membership/role khi authorize.
     @JsonIgnore
     @OneToMany(mappedBy = "server", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     var members: MutableList<ServerMember> = mutableListOf()

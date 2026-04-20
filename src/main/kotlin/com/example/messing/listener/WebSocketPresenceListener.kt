@@ -1,7 +1,7 @@
 package com.example.messing.listener
 
 import com.example.messing.repository.UserRepository
-import com.example.messing.service.CallPresenceService
+import com.example.messing.service.VoicePresenceService
 import org.springframework.context.event.EventListener
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor
 import org.springframework.stereotype.Component
@@ -11,7 +11,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent
 @Component
 class WebSocketPresenceListener(
     private val userRepository: UserRepository,
-    private val callPresenceService: CallPresenceService
+    private val voicePresenceService: VoicePresenceService
 ) {
 
     @EventListener
@@ -20,7 +20,7 @@ class WebSocketPresenceListener(
         val principalName = accessor.user?.name ?: return
 
         val user = userRepository.findByEmail(principalName) ?: return
-        callPresenceService.markOnline(user.id)
+        voicePresenceService.markOnline(user.id)
     }
 
     @EventListener
@@ -29,6 +29,6 @@ class WebSocketPresenceListener(
         val principalName = accessor.user?.name ?: return
 
         val user = userRepository.findByEmail(principalName) ?: return
-        callPresenceService.markOffline(user.id)
+        voicePresenceService.markOffline(user.id)
     }
 }

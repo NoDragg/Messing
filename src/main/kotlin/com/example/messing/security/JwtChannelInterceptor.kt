@@ -1,6 +1,6 @@
 package com.example.messing.security
 
-import com.example.messing.config.JwtUtil
+import com.example.messing.security.JwtUtil
 import com.example.messing.service.CustomUserDetailsService
 import org.springframework.messaging.Message
 import org.springframework.messaging.MessageChannel
@@ -17,7 +17,7 @@ class JwtChannelInterceptor(
     private val customUserDetailsService: CustomUserDetailsService
 ) : ChannelInterceptor {
 
-    override fun preSend(message: Message<*>, channel: MessageChannel): Message<*> {
+    override fun preSend(message: Message<*>, channel: MessageChannel): Message<*>? {
         val accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor::class.java)
             ?: return message
 
@@ -27,28 +27,30 @@ class JwtChannelInterceptor(
 
         val rawAuthHeader = accessor.getFirstNativeHeader("X-Authorization")
             ?: accessor.getFirstNativeHeader("Authorization")
-            ?: return message
+            ?: return null
 
         val token = rawAuthHeader.removePrefix("Bearer ").trim()
         if (token.isBlank()) {
-            return message
+            return null
         }
 
-        try {
-            val email = jwtUtil.extractEmail(token) ?: return message
+        return try {
+            val email = jwtUtil.extractEmail(token) ?: return null
             val userDetails = customUserDetailsService.loadUserByUsername(email)
 
-            if (jwtUtil.isTokenValid(token, userDetails)) {
-                accessor.user = UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    userDetails.authorities
-                )
+            if (!jwtUtil.isTokenValid(token, userDetails)) {
+                return null
             }
-        } catch (_: Exception) {
-            // Invalid token: keep unauthenticated for downstream handling
-        }
 
-        return message
+            accessor.user = UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.authorities
+            )
+
+            message
+        } catch (_: Exception) {
+            null
+        }
     }
 }

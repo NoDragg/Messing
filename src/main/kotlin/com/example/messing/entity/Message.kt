@@ -29,10 +29,12 @@ class Message(
 
     // --- Relationships ---
 
+    // Sender được giữ riêng để trace nguồn gốc message và render UI realtime.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id", nullable = false)
     var sender: User? = null,
 
+    // Channel là phạm vi hội thoại; payload API chỉ expose id thay vì entity graph.
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "channel_id", nullable = false)
