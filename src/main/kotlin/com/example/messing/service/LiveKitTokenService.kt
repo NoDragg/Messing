@@ -14,7 +14,14 @@ import org.springframework.stereotype.Service
 class LiveKitTokenService(
     private val liveKitProperties: LiveKitProperties
 ) {
-    fun createJoinToken(userId: String, username: String, roomName: String, role: VoiceRole, listenOnly: Boolean): String {
+    fun createJoinToken(
+        userId: String,
+        username: String,
+        avatarUrl: String?,
+        roomName: String,
+        role: VoiceRole,
+        listenOnly: Boolean,
+    ): String {
         val accessToken = AccessToken(
             liveKitProperties.apiKey,
             liveKitProperties.apiSecret,
@@ -25,6 +32,13 @@ class LiveKitTokenService(
             append('{')
             append("\"userId\":\"").append(userId).append("\",")
             append("\"username\":\"").append(username).append("\",")
+            append("\"avatarUrl\":")
+            if (avatarUrl.isNullOrBlank()) {
+                append("null")
+            } else {
+                append('"').append(avatarUrl).append('"')
+            }
+            append(',')
             append("\"roomId\":\"").append(roomName).append("\",")
             append("\"role\":\"").append(role.name).append("\",")
             append("\"listenOnly\":").append(listenOnly)

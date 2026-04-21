@@ -32,13 +32,14 @@ class VoiceController(
         val participant = voiceParticipantService.upsertJoinState(
             userId = userId,
             channelId = request.channelId,
-            sessionId = session.id!!,
+            sessionId = session.id,
             listenOnly = !request.wantMic
         )
 
         val token = liveKitTokenService.createJoinToken(
             userId = userId,
             username = user.username,
+            avatarUrl = user.avatarUrl,
             roomName = session.roomName,
             role = participant.role,
             listenOnly = !participant.isMicEnabled
@@ -48,7 +49,7 @@ class VoiceController(
         voiceStateBroadcaster.broadcastStateChanged(channelState)
 
         return JoinVoiceResponse(
-            sessionId = session.id!!,
+            sessionId = session.id,
             channelId = request.channelId,
             roomName = session.roomName,
             livekitUrl = liveKitTokenService.getUrl(),
