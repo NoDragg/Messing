@@ -9,10 +9,12 @@ import com.example.messing.repository.ChannelRepository
 import com.example.messing.repository.MessageRepository
 import com.example.messing.repository.UserRepository
 import jakarta.validation.Valid
+import org.slf4j.LoggerFactory
 import org.springframework.messaging.handler.annotation.DestinationVariable
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.messaging.handler.annotation.Payload
 import org.springframework.messaging.simp.SimpMessagingTemplate
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Controller
 import java.security.Principal
 
@@ -24,19 +26,25 @@ class ChatController(
     private val messagingTemplate: SimpMessagingTemplate
 ) {
 
+    private val logger = LoggerFactory.getLogger(ChatController::class.java)
+
     @MessageMapping("/chat/{channelId}/sendMessage")
     fun sendMessage(
         @DestinationVariable channelId: String,
         @Valid @Payload request: ChatMessageRequest,
-        principal: Principal?
+        principal: Principal
     ) {
-        val principalName = principal?.name
-        if (principalName.isNullOrBlank()) {
-            return
-        }
+        logger.info(
+            "Incoming websocket chat message channelId={} principal={} contentLength={}",
+            channelId,
+            principal.name,
+            request.content.length
+        )
+
+        val principalName = principal.name
 
         val sender = userRepository.findByEmail(principalName)
-            ?: return
+            ?: throw ResourceNotFoundException("Sender not found for authenticated principal: $principalName")
 
         val channel = channelRepository.findById(channelId).orElseThrow {
             ResourceNotFoundException("Channel not found")
@@ -60,6 +68,14 @@ class ChatController(
             senderId = sender.id ?: throw IllegalStateException("Sender id is null"),
             senderUsername = sender.username,
             senderAvatarUrl = sender.avatarUrl
+        )
+
+        logger.info(
+            "Saved websocket chat message id={} channelId={} sender={} contentLength={}",
+            response.id,
+            response.channelId,
+            response.senderUsername,
+            response.content.length
         )
 
         messagingTemplate.convertAndSend("/topic/channels/$channelId", response)
