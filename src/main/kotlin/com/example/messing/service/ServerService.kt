@@ -4,9 +4,17 @@ import com.example.messing.dto.server.CreateInviteResponse
 import com.example.messing.dto.server.CreateServerRequest
 import com.example.messing.dto.server.InviteAcceptResponse
 import com.example.messing.dto.server.InviteMemberRequest
+import com.example.messing.dto.server.ServerBotResponse
 import com.example.messing.dto.server.ServerResponse
+import com.example.messing.dto.server.UpdateServerBotRequest
 import com.example.messing.dto.server.UpdateServerRequest
-import com.example.messing.entity.*
+import com.example.messing.entity.Channel
+import com.example.messing.entity.ChannelType
+import com.example.messing.entity.MemberRole
+import com.example.messing.entity.Server
+import com.example.messing.entity.ServerInvite
+import com.example.messing.entity.ServerMember
+import com.example.messing.entity.User
 import com.example.messing.exception.BadRequestException
 import com.example.messing.exception.ForbiddenException
 import com.example.messing.exception.ResourceNotFoundException
@@ -35,8 +43,8 @@ class ServerService(
     private val secureRandom = SecureRandom()
 
     @Transactional
-    fun createServer(request: CreateServerRequest, currentUserEmail: String): ServerResponse {
-        val user = userRepository.findByEmail(currentUserEmail)
+    fun createServer(request: CreateServerRequest, currentUserIdentifier: String): ServerResponse {
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         val server = Server(
@@ -53,6 +61,8 @@ class ServerService(
         )
         serverMemberRepository.save(ownerMember)
 
+        val botUser = createServerBotUser(savedServer)
+
         val generalChannel = Channel(
             name = "general",
             type = ChannelType.TEXT,
@@ -60,12 +70,12 @@ class ServerService(
         )
         channelRepository.save(generalChannel)
 
-        return ServerResponse.from(savedServer)
+        return ServerResponse.from(savedServer, botUser)
     }
 
     @Transactional
-    fun inviteMember(serverId: String, request: InviteMemberRequest, currentUserEmail: String) {
-        val inviter = userRepository.findByEmail(currentUserEmail)
+    fun inviteMember(serverId: String, request: InviteMemberRequest, currentUserIdentifier: String) {
+        val inviter = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("Inviter not found")
 
         val server = serverRepository.findById(serverId).orElseThrow {
@@ -96,8 +106,8 @@ class ServerService(
     }
 
     @Transactional
-    fun createInviteLink(serverId: String, currentUserEmail: String): CreateInviteResponse {
-        val inviter = userRepository.findByEmail(currentUserEmail)
+    fun createInviteLink(serverId: String, currentUserIdentifier: String): CreateInviteResponse {
+        val inviter = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("Inviter not found")
 
         val server = serverRepository.findById(serverId).orElseThrow {
@@ -128,8 +138,8 @@ class ServerService(
     }
 
     @Transactional
-    fun joinServerByInviteCode(code: String, currentUserEmail: String): InviteAcceptResponse {
-        val user = userRepository.findByEmail(currentUserEmail)
+    fun joinServerByInviteCode(code: String, currentUserIdentifier: String): InviteAcceptResponse {
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         val invite = serverInviteRepository.findByCode(code)
@@ -164,28 +174,28 @@ class ServerService(
         )
     }
 
-    fun getServersForUser(currentUserEmail: String): List<ServerResponse> {
-        val user = userRepository.findByEmail(currentUserEmail)
+    fun getServersForUser(currentUserIdentifier: String): List<ServerResponse> {
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         val memberships = serverMemberRepository.findAllByUserId(user.id!!)
         return memberships.map { membership ->
             val server = membership.server
                 ?: throw ResourceNotFoundException("Server not found")
-            ServerResponse.from(server)
+            ServerResponse.from(server, resolveServerBotUser(server))
         }
     }
 
     @Transactional
-    fun updateServerAvatar(serverId: String, file: MultipartFile, currentUserEmail: String): String {
-        val requester = userRepository.findByEmail(currentUserEmail)
+    fun updateServerAvatar(serverId: String, file: MultipartFile, currentUserIdentifier: String): String {
+        val requester = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         val membership = serverMemberRepository.findByUserIdAndServerId(requester.id!!, serverId)
             ?: throw BadRequestException("Bạn không phải thành viên của server này")
 
-        if (membership.role != MemberRole.OWNER && membership.role != MemberRole.ADMIN) {
-            throw BadRequestException("Bạn không có quyền đổi ảnh đại diện server")
+        if (membership.role != MemberRole.OWNER) {
+            throw BadRequestException("Chỉ owner mới có quyền đổi ảnh đại diện server")
         }
 
         val server = serverRepository.findById(serverId).orElseThrow {
@@ -200,8 +210,49 @@ class ServerService(
     }
 
     @Transactional
-    fun updateServer(serverId: String, request: UpdateServerRequest, currentUserEmail: String): ServerResponse {
-        val user = userRepository.findByEmail(currentUserEmail)
+    fun updateServerBot(serverId: String, request: UpdateServerBotRequest, currentUserIdentifier: String): ServerBotResponse {
+        val requester = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
+            ?: throw ResourceNotFoundException("User not found")
+
+        val server = serverRepository.findById(serverId).orElseThrow {
+            ResourceNotFoundException("Server not found")
+        }
+
+        val membership = serverMemberRepository.findByUserIdAndServerId(requester.id!!, serverId)
+            ?: throw BadRequestException("Bạn không phải thành viên của server này")
+
+        if (membership.role != MemberRole.OWNER) {
+            throw ForbiddenException("Chỉ owner mới có quyền chỉnh sửa bot của server")
+        }
+
+        val botUser = resolveServerBotUser(server)
+        request.displayName?.trim()?.takeIf { it.isNotBlank() }?.let {
+            botUser.displayName = it
+        }
+
+        request.avatar?.let { avatarFile ->
+            botUser.avatarUrl = fileStorageService.storeCircularAvatar(avatarFile, "users")
+        }
+
+        botUser.isVirtual = true
+
+        val savedBot = userRepository.save(botUser)
+        server.botUserId = savedBot.id
+        serverRepository.save(server)
+
+        return ServerBotResponse(
+            serverId = serverId,
+            botUserId = savedBot.id!!,
+            username = savedBot.username,
+            displayName = savedBot.displayName?.takeIf { it.isNotBlank() } ?: savedBot.username,
+            avatarUrl = savedBot.avatarUrl,
+            isVirtual = savedBot.isVirtual
+        )
+    }
+
+    @Transactional
+    fun updateServer(serverId: String, request: UpdateServerRequest, currentUserIdentifier: String): ServerResponse {
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         val server = serverRepository.findById(serverId)
@@ -214,12 +265,12 @@ class ServerService(
         server.name = request.name.trim()
         val updated = serverRepository.save(server)
 
-        return ServerResponse.from(updated)
+        return ServerResponse.from(updated, resolveServerBotUser(updated))
     }
 
     @Transactional
-    fun deleteServer(serverId: String, currentUserEmail: String) {
-        val user = userRepository.findByEmail(currentUserEmail)
+    fun deleteServer(serverId: String, currentUserIdentifier: String) {
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         val server = serverRepository.findById(serverId)
@@ -233,6 +284,43 @@ class ServerService(
         serverInviteRepository.deleteAllByServerId(serverId)
 
         serverRepository.delete(server)
+    }
+
+    private fun createServerBotUser(server: Server): User {
+        val botUsername = "bot:server:${server.id}"
+        val botEmail = botUsername
+        val existing = userRepository.findByUsername(botUsername) ?: userRepository.findByEmail(botEmail)
+
+        val bot = if (existing != null) {
+            existing
+        } else {
+            User(
+                username = botUsername,
+                displayName = "Messing Bot",
+                email = botEmail,
+                password = "__bot_account__",
+                avatarUrl = null,
+                isVirtual = true
+            )
+        }
+
+        bot.username = botUsername
+        bot.displayName = bot.displayName?.takeIf { it.isNotBlank() } ?: "Messing Bot"
+        bot.email = botEmail
+        bot.isVirtual = true
+
+        val savedBot = userRepository.save(bot)
+        server.botUserId = savedBot.id
+        serverRepository.save(server)
+        return savedBot
+    }
+
+    private fun resolveServerBotUser(server: Server): User {
+        val botUserId = server.botUserId
+        if (!botUserId.isNullOrBlank()) {
+            userRepository.findById(botUserId).orElse(null)?.let { return it }
+        }
+        return createServerBotUser(server)
     }
 
     private fun generateUniqueInviteCode(length: Int = 6): String {

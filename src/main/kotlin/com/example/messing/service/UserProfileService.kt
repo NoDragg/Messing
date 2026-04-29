@@ -16,14 +16,14 @@ class UserProfileService(
 
 
     @Transactional(readOnly = true)
-    fun getMyProfile(currentUserEmail: String): UserProfileResponse {
-        val user = userRepository.findByEmail(currentUserEmail)
+    fun getMyProfile(currentUserIdentifier: String): UserProfileResponse {
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         return UserProfileResponse(
             id = user.id!!,
             username = user.username,
-            loginName = user.loginName,
+            displayName = user.displayName?.takeIf { it.isNotBlank() } ?: user.username,
             email = user.email,
             avatarUrl = user.avatarUrl,
             bio = user.bio,
@@ -33,19 +33,19 @@ class UserProfileService(
 
 
     @Transactional
-    fun updateMyProfile(request: UpdateProfileRequest, currentUserEmail: String): UserProfileResponse {
-        val user = userRepository.findByEmail(currentUserEmail)
+    fun updateMyProfile(request: UpdateProfileRequest, currentUserIdentifier: String): UserProfileResponse {
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
-        request.username?.let { user.username = it }
-        request.bio?.let { user.bio = it }
+        user.displayName = request.displayName?.takeIf { it.isNotBlank() }
+        user.bio = request.bio?.let { it }
 
         userRepository.save(user)
 
         return UserProfileResponse(
             id = user.id!!,
             username = user.username,
-            loginName = user.loginName,
+            displayName = user.displayName?.takeIf { it.isNotBlank() } ?: user.username,
             email = user.email,
             avatarUrl = user.avatarUrl,
             bio = user.bio,
@@ -54,8 +54,8 @@ class UserProfileService(
     }
 
     @Transactional
-    fun updateMyAvatar(file: MultipartFile, currentUserEmail: String): String {
-        val user = userRepository.findByEmail(currentUserEmail)
+    fun updateMyAvatar(file: MultipartFile, currentUserIdentifier: String): String {
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         val avatarUrl = fileStorageService.storeCircularAvatar(file, "users")

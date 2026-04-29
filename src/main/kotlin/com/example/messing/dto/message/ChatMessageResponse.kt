@@ -12,5 +12,7 @@ data class ChatMessageResponse(
     val createdAt: Instant,
     val senderId: String,
     val senderUsername: String,
-    val senderAvatarUrl: String?
+    val senderDisplayName: String?,
+    val senderAvatarUrl: String?,
+    val metadata: Map<String, Any?>? = null
 )

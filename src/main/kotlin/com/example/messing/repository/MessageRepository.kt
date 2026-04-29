@@ -15,6 +15,7 @@ interface MessageRepository : JpaRepository<Message, String> {
     // Page-based load cho lịch sử chat khi cần phân trang sâu.
     fun findAllByChannelId(channelId: String, pageable: Pageable): Page<Message>
 
-    // Default fetch ngược thời gian để kéo 50 tin nhắn mới nhất từ API.
     fun findByChannelIdOrderByCreatedAtDesc(channelId: String, pageable: Pageable): Page<Message>
+
+    fun findTop10ByChannelIdOrderByCreatedAtDesc(channelId: String): List<Message>
 }

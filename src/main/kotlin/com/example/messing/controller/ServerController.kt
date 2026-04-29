@@ -5,7 +5,9 @@ import com.example.messing.dto.server.CreateInviteResponse
 import com.example.messing.dto.server.CreateServerRequest
 import com.example.messing.dto.server.InviteAcceptResponse
 import com.example.messing.dto.server.InviteMemberRequest
+import com.example.messing.dto.server.ServerBotResponse
 import com.example.messing.dto.server.ServerResponse
+import com.example.messing.dto.server.UpdateServerBotRequest
 import com.example.messing.dto.server.UpdateServerRequest
 import com.example.messing.service.ServerService
 import jakarta.validation.Valid
@@ -83,8 +85,20 @@ class ServerController(
         val response = serverService.updateServer(
             serverId = serverId,
             request = request,
-            currentUserEmail = authentication.name
+            currentUserIdentifier = authentication.name
         )
+        return ResponseEntity.ok(response)
+    }
+
+    @PutMapping("/{serverId}/bot", consumes = ["multipart/form-data"])
+    fun updateServerBot(
+        @PathVariable serverId: String,
+        @RequestParam(value = "displayName", required = false) displayName: String?,
+        @RequestParam(value = "avatar", required = false) avatar: MultipartFile?,
+        authentication: Authentication
+    ): ResponseEntity<ServerBotResponse> {
+        val request = UpdateServerBotRequest(displayName = displayName, avatar = avatar)
+        val response = serverService.updateServerBot(serverId, request, authentication.name)
         return ResponseEntity.ok(response)
     }
 

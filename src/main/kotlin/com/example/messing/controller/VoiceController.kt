@@ -22,7 +22,7 @@ class VoiceController(
     // Nếu wantMic = false hoặc user từ chối mic -> listenOnly = true, vẫn join được.
     @PostMapping("/join")
     fun joinVoice(@RequestBody request: JoinVoiceRequest, principal: Principal): JoinVoiceResponse {
-        val user = userRepository.findByEmail(principal.name)
+        val user = userRepository.findByEmailOrUsername(principal.name, principal.name)
             ?: throw IllegalArgumentException("User not found")
         val userId = user.id ?: throw IllegalArgumentException("User id not found")
 
@@ -64,7 +64,7 @@ class VoiceController(
     // Rời voice channel, backend cập nhật state và broadcast.
     @PostMapping("/leave")
     fun leaveVoice(@RequestBody request: LeaveVoiceRequest, principal: Principal): VoiceChannelStateDTO {
-        val user = userRepository.findByEmail(principal.name)
+        val user = userRepository.findByEmailOrUsername(principal.name, principal.name)
             ?: throw IllegalArgumentException("User not found")
         val userId = user.id ?: throw IllegalArgumentException("User id not found")
 
@@ -84,7 +84,7 @@ class VoiceController(
     // Bật/tắt mic sau khi đã join. Cập nhật role speaker/listener tương ứng.
     @PostMapping("/mic")
     fun toggleMic(@RequestBody request: ToggleMicRequest, principal: Principal): VoiceParticipantStateDTO {
-        val user = userRepository.findByEmail(principal.name)
+        val user = userRepository.findByEmailOrUsername(principal.name, principal.name)
             ?: throw IllegalArgumentException("User not found")
         val userId = user.id ?: throw IllegalArgumentException("User id not found")
 

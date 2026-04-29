@@ -17,8 +17,8 @@ class User(
     @Column(name = "username", nullable = false, unique = true, length = 50)
     var username: String = "",
 
-    @Column(name = "login_name", nullable = false, unique = true, length = 50)
-    var loginName: String = "",
+    @Column(name = "display_name", nullable = true, length = 100)
+    var displayName: String? = null,
 
     @Column(name = "email", nullable = false, unique = true, length = 100)
     var email: String = "",
@@ -35,6 +35,9 @@ class User(
 
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),
+
+    @Column(name = "is_virtual", nullable = false)
+    var isVirtual: Boolean = false,
 
     // --- Relationships ---
 
@@ -63,5 +66,5 @@ class User(
     override fun hashCode(): Int = id?.hashCode() ?: 0
 
     override fun toString(): String =
-        "User(id=$id, username='$username', loginName='$loginName', email='$email')"
+        "User(id=$id, username='$username', displayName='$displayName', email='$email')"
 }

@@ -14,11 +14,11 @@ class CustomUserDetailsService(
 ) : UserDetailsService {
 
     override fun loadUserByUsername(identifier: String): UserDetails {
-        val user = userRepository.findByEmailOrLoginName(identifier, identifier)
+        val user = userRepository.findByEmailOrUsername(identifier, identifier)
             ?: throw UsernameNotFoundException("User not found with identifier: $identifier")
 
         return User.builder()
-            .username(user.email)
+            .username(user.username)
             .password(user.password)
             .authorities(listOf(SimpleGrantedAuthority("ROLE_USER")))
             .build()

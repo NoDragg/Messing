@@ -9,9 +9,8 @@ data class RegisterRequest(
     @field:Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     val username: String,
 
-    @field:NotBlank(message = "Login name is required")
-    @field:Size(min = 3, max = 50, message = "Login name must be between 3 and 50 characters")
-    val loginName: String,
+    @field:Size(max = 100, message = "Display name must be at most 100 characters")
+    val displayName: String? = null,
 
     @field:NotBlank(message = "Email is required")
     @field:Email(message = "Email must be valid")

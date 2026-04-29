@@ -20,6 +20,9 @@ class Server(
     @Column(name = "icon_url", length = 500)
     var iconUrl: String? = null,
 
+    @Column(name = "bot_user_id", length = 36)
+    var botUserId: String? = null,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),
 

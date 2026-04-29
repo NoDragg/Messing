@@ -6,7 +6,7 @@ import java.time.Instant
 data class UserProfileResponse(
     val id: String,
     val username: String,
-    val loginName: String,
+    val displayName: String,
     val email: String,
     val avatarUrl: String?,
     val bio: String?,
@@ -14,6 +14,6 @@ data class UserProfileResponse(
 )
 
 data class UpdateProfileRequest(
-    val username: String?,
+    val displayName: String?,
     val bio: String?
 )

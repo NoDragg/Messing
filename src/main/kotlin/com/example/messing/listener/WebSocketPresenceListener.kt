@@ -19,7 +19,7 @@ class WebSocketPresenceListener(
         val accessor = StompHeaderAccessor.wrap(event.message)
         val principalName = accessor.user?.name ?: return
 
-        val user = userRepository.findByEmail(principalName) ?: return
+        val user = userRepository.findByEmailOrUsername(principalName, principalName) ?: return
         voicePresenceService.markOnline(user.id)
     }
 
@@ -28,7 +28,7 @@ class WebSocketPresenceListener(
         val accessor = StompHeaderAccessor.wrap(event.message)
         val principalName = accessor.user?.name ?: return
 
-        val user = userRepository.findByEmail(principalName) ?: return
+        val user = userRepository.findByEmailOrUsername(principalName, principalName) ?: return
         voicePresenceService.markOffline(user.id)
     }
 }

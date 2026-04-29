@@ -12,14 +12,10 @@ interface UserRepository : JpaRepository<User, String> {
 
     fun findByUsername(username: String): User?
 
-    fun findByLoginName(loginName: String): User?
-
-    fun findByEmailOrLoginName(email: String, loginName: String): User?
+    fun findByEmailOrUsername(email: String, username: String): User?
 
     // Duplicate guards cho register flow.
     fun existsByEmail(email: String): Boolean
 
     fun existsByUsername(username: String): Boolean
-
-    fun existsByLoginName(loginName: String): Boolean
 }

@@ -29,26 +29,23 @@ class AuthService(
         if (userRepository.existsByUsername(request.username)) {
             throw BadRequestException("Username already exists")
         }
-        if (userRepository.existsByLoginName(request.loginName)) {
-            throw BadRequestException("Login name already exists")
-        }
 
         val user = User(
             username = request.username,
-            loginName = request.loginName,
+            displayName = request.displayName,
             email = request.email,
             password = passwordEncoder.encode(request.password) ?: ""
         )
         val savedUser = userRepository.save(user)
 
-        val userDetails: UserDetails = userDetailsService.loadUserByUsername(savedUser.email)
+        val userDetails: UserDetails = userDetailsService.loadUserByUsername(savedUser.username)
         val token = jwtUtil.generateToken(userDetails)
 
         return AuthResponse(
             token = token,
             userId = savedUser.id!!,
             username = savedUser.username,
-            loginName = savedUser.loginName,
+            displayName = savedUser.displayName?.takeIf { it.isNotBlank() },
             email = savedUser.email
         )
     }
@@ -58,17 +55,21 @@ class AuthService(
             UsernamePasswordAuthenticationToken(request.identifier, request.password)
         )
 
-        val user = userRepository.findByEmailOrLoginName(request.identifier, request.identifier)
+        val user = userRepository.findByEmailOrUsername(request.identifier, request.identifier)
             ?: throw BadRequestException("Invalid credentials")
 
-        val userDetails: UserDetails = userDetailsService.loadUserByUsername(user.email)
+        if (user.isVirtual) {
+            throw BadRequestException("Invalid credentials")
+        }
+
+        val userDetails: UserDetails = userDetailsService.loadUserByUsername(user.username)
         val token = jwtUtil.generateToken(userDetails)
 
         return AuthResponse(
             token = token,
             userId = user.id!!,
             username = user.username,
-            loginName = user.loginName,
+            displayName = user.displayName?.takeIf { it.isNotBlank() },
             email = user.email
         )
     }

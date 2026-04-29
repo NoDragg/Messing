@@ -54,7 +54,9 @@ class MessageRestController(
                 createdAt = message.createdAt,
                 senderId = sender.id ?: throw IllegalStateException("Sender id is null"),
                 senderUsername = sender.username,
-                senderAvatarUrl = sender.avatarUrl
+                senderDisplayName = sender.displayName?.takeIf { it.isNotBlank() } ?: sender.username,
+                senderAvatarUrl = sender.avatarUrl,
+                metadata = null
             )
         }
 
@@ -68,7 +70,7 @@ class MessageRestController(
         principal: Principal?
     ): ResponseEntity<UploadChatImageResponse> {
         val authPrincipal = principal ?: throw ResourceNotFoundException("Unauthorized")
-        val sender = userRepository.findByEmail(authPrincipal.name)
+        val sender = userRepository.findByEmailOrUsername(authPrincipal.name, authPrincipal.name)
             ?: throw ResourceNotFoundException("User not found")
 
         val channel = channelRepository.findById(channelId).orElseThrow {
@@ -94,7 +96,9 @@ class MessageRestController(
             createdAt = savedMessage.createdAt,
             senderId = sender.id ?: throw IllegalStateException("Sender id is null"),
             senderUsername = sender.username,
-            senderAvatarUrl = sender.avatarUrl
+            senderDisplayName = sender.displayName?.takeIf { it.isNotBlank() } ?: sender.username,
+            senderAvatarUrl = sender.avatarUrl,
+            metadata = null
         )
 
         messagingTemplate.convertAndSend("/topic/channels/$channelId", response)

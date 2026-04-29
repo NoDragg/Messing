@@ -27,9 +27,9 @@ class ChannelService(
     fun createChannel(
         serverId: String,
         request: CreateChannelRequest,
-        currentUserEmail: String
+        currentUserIdentifier: String
     ): ChannelResponse {
-        val user = userRepository.findByEmail(currentUserEmail)
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         val server = serverRepository.findById(serverId)
@@ -64,9 +64,9 @@ class ChannelService(
         serverId: String,
         channelId: String,
         request: UpdateChannelRequest,
-        currentUserEmail: String
+        currentUserIdentifier: String
     ): ChannelResponse {
-        val user = userRepository.findByEmail(currentUserEmail)
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         // Verify the server exists
@@ -106,9 +106,9 @@ class ChannelService(
     fun deleteChannel(
         serverId: String,
         channelId: String,
-        currentUserEmail: String
+        currentUserIdentifier: String
     ) {
-        val user = userRepository.findByEmail(currentUserEmail)
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         // Verify the server exists
@@ -135,8 +135,8 @@ class ChannelService(
         channelRepository.delete(channel)
     }
 
-    fun getChannelsByServer(serverId: String, currentUserEmail: String): List<ChannelResponse> {
-        val user = userRepository.findByEmail(currentUserEmail)
+    fun getChannelsByServer(serverId: String, currentUserIdentifier: String): List<ChannelResponse> {
+        val user = userRepository.findByEmailOrUsername(currentUserIdentifier, currentUserIdentifier)
             ?: throw ResourceNotFoundException("User not found")
 
         // Verify the server exists

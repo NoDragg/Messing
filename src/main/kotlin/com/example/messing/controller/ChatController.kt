@@ -43,7 +43,7 @@ class ChatController(
 
         val principalName = principal.name
 
-        val sender = userRepository.findByEmail(principalName)
+        val sender = userRepository.findByEmailOrUsername(principalName, principalName)
             ?: throw ResourceNotFoundException("Sender not found for authenticated principal: $principalName")
 
         val channel = channelRepository.findById(channelId).orElseThrow {
@@ -67,7 +67,9 @@ class ChatController(
             createdAt = savedMessage.createdAt,
             senderId = sender.id ?: throw IllegalStateException("Sender id is null"),
             senderUsername = sender.username,
-            senderAvatarUrl = sender.avatarUrl
+            senderDisplayName = sender.displayName,
+            senderAvatarUrl = sender.avatarUrl,
+            metadata = null
         )
 
         logger.info(
