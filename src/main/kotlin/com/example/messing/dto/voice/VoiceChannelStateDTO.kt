@@ -6,6 +6,8 @@ data class VoiceChannelStateDTO(
     val participantCount: Int,
     val speakerCount: Int,
     val listenerCount: Int,
+    val screenShareCount: Int,
     val activeSpeakerIds: List<String>,
+    val activeScreenShareUserIds: List<String>,
     val roomName: String?
 )

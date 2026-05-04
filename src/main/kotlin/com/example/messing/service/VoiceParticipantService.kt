@@ -35,7 +35,26 @@ class VoiceParticipantService(
         val p = store.getParticipant(sessionId, userId) ?: return null
         val updated = p.copy(
             isMicEnabled = enabled,
-            role = if (enabled) VoiceRole.SPEAKER else VoiceRole.LISTENER
+            role = if (enabled) VoiceRole.SPEAKER else VoiceRole.LISTENER,
+            lastSeenAt = Instant.now()
+        )
+        store.upsertParticipant(updated)
+        return updated
+    }
+
+    fun markScreenShareEnabled(
+        userId: String,
+        sessionId: String,
+        enabled: Boolean,
+        trackSid: String? = null,
+        source: String? = null,
+    ): VoiceParticipant? {
+        val p = store.getParticipant(sessionId, userId) ?: return null
+        val updated = p.copy(
+            isScreenSharing = enabled,
+            screenShareTrackSid = if (enabled) trackSid else null,
+            screenShareSource = if (enabled) source else null,
+            lastSeenAt = Instant.now()
         )
         store.upsertParticipant(updated)
         return updated
@@ -45,6 +64,9 @@ class VoiceParticipantService(
         val p = store.getParticipant(sessionId, userId) ?: return
         val updated = p.copy(
             connectionState = VoiceConnectionState.DISCONNECTED,
+            isScreenSharing = false,
+            screenShareTrackSid = null,
+            screenShareSource = null,
             leftAt = Instant.now()
         )
         store.upsertParticipant(updated)

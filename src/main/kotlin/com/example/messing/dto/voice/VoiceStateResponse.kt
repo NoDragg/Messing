@@ -15,5 +15,7 @@ data class VoiceStateResponse(
     val participants: List<VoiceParticipantStateDTO>,
     val speakerCount: Int,
     val listenerCount: Int,
-    val activeSpeakerIds: List<String>
+    val screenShareCount: Int,
+    val activeSpeakerIds: List<String>,
+    val activeScreenShareUserIds: List<String>
 )

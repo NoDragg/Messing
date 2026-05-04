@@ -9,5 +9,8 @@ data class VoiceParticipantStateDTO(
     val isMicEnabled: Boolean,
     val isMuted: Boolean,
     val isDeafened: Boolean,
+    val isScreenSharing: Boolean,
+    val screenShareTrackSid: String?,
+    val screenShareSource: String?,
     val connectionState: VoiceConnectionState
 )

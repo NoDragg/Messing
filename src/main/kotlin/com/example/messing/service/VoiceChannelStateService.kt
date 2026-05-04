@@ -12,11 +12,12 @@ class VoiceChannelStateService(
 ) {
     fun buildChannelState(channelId: String): VoiceChannelStateDTO {
         val session = store.getActiveSession(channelId)
-            ?: return VoiceChannelStateDTO(channelId, null, 0, 0, 0, emptyList(), null)
+            ?: return VoiceChannelStateDTO(channelId, null, 0, 0, 0, 0, emptyList(), emptyList(), null)
 
         val participants = store.getActiveParticipants(session.id)
         val speakers = participants.filter { it.role == VoiceRole.SPEAKER }
         val listeners = participants.filter { it.role == VoiceRole.LISTENER }
+        val screenSharers = participants.filter { it.isScreenSharing }
 
         return VoiceChannelStateDTO(
             channelId = channelId,
@@ -24,14 +25,16 @@ class VoiceChannelStateService(
             participantCount = participants.size,
             speakerCount = speakers.size,
             listenerCount = listeners.size,
+            screenShareCount = screenSharers.size,
             activeSpeakerIds = speakers.map { it.userId },
+            activeScreenShareUserIds = screenSharers.map { it.userId },
             roomName = session.roomName
         )
     }
 
     fun buildSessionState(channelId: String): VoiceStateResponse {
         val session = store.getActiveSession(channelId)
-            ?: return VoiceStateResponse(null, emptyList(), 0, 0, emptyList())
+            ?: return VoiceStateResponse(null, emptyList(), 0, 0, 0, emptyList(), emptyList())
 
         val participants = store.getActiveParticipants(session.id)
         val speakers = participants.filter { it.role == VoiceRole.SPEAKER }
@@ -50,7 +53,9 @@ class VoiceChannelStateService(
             participants = participants.map { toParticipantDTO(it) },
             speakerCount = speakers.size,
             listenerCount = listeners.size,
-            activeSpeakerIds = speakers.map { it.userId }
+            screenShareCount = participants.count { it.isScreenSharing },
+            activeSpeakerIds = speakers.map { it.userId },
+            activeScreenShareUserIds = participants.filter { it.isScreenSharing }.map { it.userId }
         )
     }
 
@@ -64,6 +69,9 @@ class VoiceChannelStateService(
             isMicEnabled = p.isMicEnabled,
             isMuted = p.isMuted,
             isDeafened = p.isDeafened,
+            isScreenSharing = p.isScreenSharing,
+            screenShareTrackSid = p.screenShareTrackSid,
+            screenShareSource = p.screenShareSource,
             connectionState = p.connectionState
         )
     }

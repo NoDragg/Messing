@@ -97,6 +97,30 @@ class VoiceController(
         return voiceChannelStateService.toParticipantDTO(participant)
     }
 
+    // POST /api/voice/screen-share
+    // Bật/tắt screen share trong cùng voice session.
+    @PostMapping("/screen-share")
+    fun toggleScreenShare(@RequestBody request: ScreenShareRequest, principal: Principal): VoiceParticipantStateDTO {
+        val user = userRepository.findByEmailOrUsername(principal.name, principal.name)
+            ?: throw IllegalArgumentException("User not found")
+        val userId = user.id ?: throw IllegalArgumentException("User id not found")
+
+        voiceAuthorizationService.assertCanJoinVoice(userId, request.channelId)
+
+        val participant = voiceParticipantService.markScreenShareEnabled(
+            userId = userId,
+            sessionId = request.sessionId,
+            enabled = request.enabled,
+            trackSid = request.trackSid,
+            source = request.source,
+        ) ?: throw IllegalArgumentException("Participant state not found")
+
+        val channelState = voiceChannelStateService.buildChannelState(request.channelId)
+        voiceStateBroadcaster.broadcastStateChanged(channelState)
+
+        return voiceChannelStateService.toParticipantDTO(participant)
+    }
+
     // GET /api/voice/state/{channelId}
     // Lấy snapshot toàn bộ state của channel để render UI.
     @GetMapping("/state/{channelId}")
