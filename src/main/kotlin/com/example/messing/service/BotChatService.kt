@@ -2,7 +2,6 @@ package com.example.messing.service
 
 import com.example.messing.config.BotProperties
 import com.example.messing.dto.bot.BotChatRequest
-import com.example.messing.dto.bot.BotChatResult
 import com.example.messing.dto.message.ChatMessageResponse
 import com.example.messing.entity.ChannelType
 import com.example.messing.entity.Message
@@ -40,7 +39,7 @@ class BotChatService(
         .build()
 
     @Transactional
-    fun generateAnswer(request: BotChatRequest, principalIdentifier: String): BotChatResult {
+    fun generateAnswer(request: BotChatRequest, principalIdentifier: String): ChatMessageResponse {
         val channelId = request.channelId
         val question = request.question.trim()
 
@@ -57,16 +56,16 @@ class BotChatService(
         val server = channel.server ?: throw ResourceNotFoundException("Server not found")
         val botSender = getOrCreateBotUser(server)
 
-        val userMessage = messageRepository.save(
-            Message(
-                content = question,
-                type = MessageType.TEXT,
-                sender = sender,
-                channel = channel
-            )
-        )
-
-        publishAfterCommit(channelId, toResponse(userMessage, channelId))
+//        val userMessage = messageRepository.save(
+//            Message(
+//                content = question,
+//                type = MessageType.TEXT,
+//                sender = sender,
+//                channel = channel
+//            )
+//        )
+//
+//        publishAfterCommit(channelId, toResponse(userMessage, channelId))
 
         val recentMessages = messageRepository.findTop10ByChannelIdOrderByCreatedAtDesc(channelId).reversed()
         val context = recentMessages
@@ -173,7 +172,7 @@ class BotChatService(
         val botResponse = toResponse(botMessage, channelId)
         publishAfterCommit(channelId, botResponse)
 
-        return BotChatResult(userMessage = toResponse(userMessage, channelId), botMessage = botResponse)
+        return botResponse
     }
 
     private fun toResponse(message: Message, channelId: String): ChatMessageResponse {
