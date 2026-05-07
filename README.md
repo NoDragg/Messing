@@ -1,22 +1,22 @@
 # Messing Backend
 
-Backend of **Messing**, a real-time chat application inspired by Discord.
-Built with **Spring Boot 4**, **Kotlin**, **Spring Security**, **Spring Data JPA**, **WebSocket/STOMP**, and **MariaDB**.
+Backend của **Messing** — một ứng dụng chat realtime lấy cảm hứng từ Discord.
+Dự án được xây dựng bằng **Spring Boot 4**, **Kotlin**, **Spring Security**, **Spring Data JPA**, **WebSocket/STOMP**, **MariaDB** và **LiveKit**.
 
-## Overview
+## Tổng quan
 
-The backend is responsible for:
+Backend chịu trách nhiệm cho các chức năng chính sau:
 
-- user authentication and authorization
-- server, channel, and member management
-- chat message persistence and delivery
-- invite creation and invite acceptance
-- file and image upload handling
-- voice / presence / signaling support
-- websocket-based realtime communication
-- validation and global error handling
+- xác thực và phân quyền người dùng bằng JWT
+- quản lý server, channel và thành viên
+- lưu trữ và phát tán tin nhắn realtime
+- xử lý invite và tham gia server bằng mã mời
+- upload ảnh / file cho avatar, tin nhắn và server
+- hỗ trợ voice room, screen share và signalling realtime
+- quản lý bot của server
+- xử lý lỗi thống nhất và validate dữ liệu đầu vào
 
-## Tech stack
+## Công nghệ sử dụng
 
 - Spring Boot 4.0.4
 - Kotlin 2.2.21
@@ -28,168 +28,242 @@ The backend is responsible for:
 - Bean Validation
 - MariaDB
 - Cloudinary
-- JWT (`jjwt`)
-- GraphQL code generation via Netflix DGS plugin
+- JWT với `jjwt`
+- LiveKit server SDK
+- GraphQL code generation
 
-## Requirements
+## Yêu cầu môi trường
 
-- Java 17+ runtime target
-- Maven
+- JDK tương thích với cấu hình build hiện tại
+- Maven 3.x
 - MariaDB
-- Redis if session/data caching is enabled in your environment
+- Redis nếu môi trường của bạn bật session / caching
+- LiveKit credentials nếu dùng voice features
+- Cloudinary credentials nếu dùng storage cloud
 
-> The project is configured with `java.version=22`, `maven.compiler.release=17`, and `kotlin.compiler.jvmTarget=17`.
-> In practice, use a JDK compatible with the build configuration used by your environment.
+> Cấu hình build hiện tại đang khai báo `java.version=22`, `maven.compiler.release=17` và `kotlin.compiler.jvmTarget=17`.
+> Hãy dùng JDK phù hợp với môi trường build của bạn để tránh lỗi compile.
 
-## Project setup
+## Cấu trúc dự án
 
-From the `Messing` directory:
+Các thư mục chính trong `src/main/kotlin/com/example/messing`:
+
+- `config` — cấu hình Security, CORS, WebSocket, JWT filter
+- `controller` — REST API và websocket entry points
+- `service` — business logic
+- `repository` — truy vấn database
+- `entity` — model JPA
+- `dto` — request / response objects
+- `security` — JWT utilities và websocket auth interceptor
+- `exception` — exception hierarchy và handler toàn cục
+
+## Chạy project ở local
+
+Từ thư mục `Messing`:
 
 ```sh
 mvn clean install
 ```
 
-This will compile the backend and run the test phase if your environment is configured correctly.
-
-## Run locally
-
-Start the backend with Maven:
+Sau khi build xong, chạy ứng dụng:
 
 ```sh
 mvn spring-boot:run
 ```
 
-Or run the generated jar after building:
+Hoặc chạy file jar đã build:
 
 ```sh
 java -jar target/Messing-0.0.1-SNAPSHOT.jar
 ```
 
-## Main responsibilities by layer
+## Cấu hình runtime
 
-### Controllers
+Backend đọc cấu hình từ `src/main/resources/application.properties` và có thể override bằng `.env` nếu file tồn tại.
 
-Controllers expose REST endpoints and websocket entry points for the frontend.
+Các biến quan trọng gồm:
 
-Common responsibilities:
+- `JWT_SECRET`
+- `JWT_EXPIRATION`
+- `APP_UPLOAD_DIR`
+- `APP_PUBLIC_BASE_URL`
+- `APP_AVATAR_SIZE`
+- `MULTIPART_MAX_FILE_SIZE`
+- `MULTIPART_MAX_REQUEST_SIZE`
+- `LIVEKIT_URL`
+- `LIVEKIT_API_KEY`
+- `LIVEKIT_API_SECRET`
+- `BOT_API_KEY`
+- `BOT_BASE_URL`
+- `BOT_MODEL`
 
-- login / register
-- server and channel CRUD
-- message APIs
-- invite acceptance
-- call signaling
-- profile updates
+Ví dụ file `.env` tối thiểu:
 
-### Services
+```properties
+JWT_SECRET=your-base64-secret
+JWT_EXPIRATION=86400000
+APP_UPLOAD_DIR=uploads
+APP_PUBLIC_BASE_URL=http://localhost:8080
+LIVEKIT_URL=https://your-livekit-host
+LIVEKIT_API_KEY=your-key
+LIVEKIT_API_SECRET=your-secret
+```
 
-Services contain the business rules.
+## Các luồng nghiệp vụ chính
 
-Examples:
+### 1. Authentication
 
-- auth and JWT handling
-- server membership validation
-- channel permission checks
-- invite expiry / cleanup
-- file upload coordination
-- presence and call state management
+- `POST /api/auth/register`
+- `POST /api/auth/login`
 
-### Repositories
+Luồng xác thực dùng JWT bearer token. Token được đưa vào header `Authorization: Bearer <token>` cho REST API, và dùng cho WebSocket/STOMP qua interceptor.
 
-Repositories handle database access for:
+### 2. Server management
 
-- users
-- servers
-- channels
-- messages
-- members
-- invites
+- tạo server
+- cập nhật server
+- xoá server
+- upload avatar server
+- mời thành viên
+- tạo invite link
+- join server bằng invite
+- quản lý bot của server
 
-### Entities
+### 3. Channel management
 
-Entities model the persisted domain:
+- tạo channel
+- đổi tên channel
+- xoá channel
+- liệt kê channel theo server
 
-- `User`
-- `Server`
-- `Channel`
-- `Message`
-- `ServerMember`
-- `ServerInvite`
+### 4. Message handling
 
-### Config
+- lấy lịch sử tin nhắn theo channel
+- gửi tin nhắn realtime qua WebSocket
+- upload image message
 
-Configuration classes manage:
+### 5. Voice / realtime
 
-- security filters and auth rules
-- websocket/STOMP setup
-- static resources / upload paths
-- CORS / infrastructure behavior
+- join / leave voice room
+- toggle mic
+- toggle screen share
+- build và broadcast voice state
 
-## Runtime configuration
+## REST API chính
 
-The backend typically needs configuration for:
+### Auth
 
-- MariaDB connection
-- JWT secret and token settings
-- Cloudinary credentials
-- Redis connection if session support is active
-- websocket endpoints and allowed origins
-- upload paths / static content mapping
+- `POST /api/auth/register`
+- `POST /api/auth/login`
 
-Check `src/main/resources/application.properties` for the current runtime settings.
+### Servers
 
-## Realtime features
+- `GET /api/servers`
+- `POST /api/servers`
+- `PUT /api/servers/{serverId}`
+- `DELETE /api/servers/{serverId}`
+- `POST /api/servers/{serverId}/avatar`
+- `POST /api/servers/{serverId}/invite`
+- `POST /api/servers/{serverId}/invites`
+- `POST /api/servers/invites/{code}/accept`
+- `PUT /api/servers/{serverId}/bot`
 
-Messing backend supports realtime communication through websocket/STOMP.
+### Channels
 
-This is used for:
+- `GET /api/servers/{serverId}/channels`
+- `POST /api/servers/{serverId}/channels`
+- `PUT /api/servers/{serverId}/channels/{channelId}`
+- `DELETE /api/servers/{serverId}/channels/{channelId}`
 
-- chat message delivery
-- presence updates
-- voice / call signaling
+### Messages
 
-Relevant components include:
+- `GET /api/channels/{channelId}/messages`
+- `POST /api/channels/{channelId}/images`
 
-- `WebSocketConfig`
-- `ChatController`
-- `CallSignalingController`
-- `WebSocketPresenceListener`
-- `CallPresenceService`
+### Voice
+
+- `POST /api/voice/join`
+- `POST /api/voice/leave`
+- `POST /api/voice/mic`
+- `POST /api/voice/screen-share`
+- `GET /api/voice/state/{channelId}`
+
+## WebSocket / STOMP
+
+### Endpoint
+
+- `/ws`
+
+### Application destination prefix
+
+- `/app`
+
+### Broker destinations
+
+- `/topic`
+- `/queue`
+
+### Chat message send
+
+Client gửi tới:
+
+```text
+/app/chat/{channelId}/sendMessage
+```
+
+Server broadcast message tới:
+
+```text
+/topic/channels/{channelId}
+```
+
+### Auth cho WebSocket
+
+JWT được kiểm tra trong websocket inbound interceptor. Client có thể gửi token qua header native `Authorization` hoặc `X-Authorization` khi CONNECT.
+
+## Storage
+
+Backend hỗ trợ hai chế độ lưu file:
+
+- **local** — lưu vào thư mục upload trên máy chạy backend
+- **cloudinary** — upload ảnh lên Cloudinary
+
+File storage được dùng cho:
+
+- avatar user/server/bot
+- ảnh tin nhắn
 
 ## GraphQL code generation
 
-The backend includes the Netflix DGS GraphQL codegen plugin.
+Project có cấu hình plugin generate source cho GraphQL client.
 
-Generated sources are configured from:
+- schema path: `src/main/resources/graphql-client`
+- generated source sẽ được thêm vào build trong giai đoạn generate sources
 
-- `src/main/resources/graphql-client/`
+## Khuyến nghị phát triển
 
-If you add a remote GraphQL schema, place it in that folder and run the Maven generation phase.
+- Giữ controller mỏng, đẩy business logic vào service
+- Luôn validate quyền truy cập server/channel trước khi thao tác dữ liệu
+- Không để WebSocket hoặc voice state phụ thuộc vào dữ liệu không được xác thực
+- Với upload file, luôn kiểm tra content type và giới hạn kích thước
+- Dùng `GlobalExceptionHandler` để trả lỗi API đồng nhất
 
-## Documentation guide
+## Thứ tự đọc code đề xuất
 
-If you want to understand the backend quickly, read the project docs in this order:
-
-1. `../PROJECT_README_ROADMAP.md`
-2. `../ARCHITECTURE_SUMMARY.md`
-3. `../DETAILED_FILE_INDEX.md`
-4. `../MODULE_GUIDE.md`
-5. `../FLOW_GUIDE.md`
-
-## Suggested backend reading order
+Nếu muốn hiểu backend nhanh, nên đọc theo thứ tự:
 
 1. `src/main/resources/application.properties`
 2. `src/main/kotlin/com/example/messing/config`
-3. `src/main/kotlin/com/example/messing/entity`
-4. `src/main/kotlin/com/example/messing/repository`
-5. `src/main/kotlin/com/example/messing/service`
-6. `src/main/kotlin/com/example/messing/controller`
-7. `src/main/kotlin/com/example/messing/dto`
-8. `src/main/kotlin/com/example/messing/exception`
+3. `src/main/kotlin/com/example/messing/security`
+4. `src/main/kotlin/com/example/messing/entity`
+5. `src/main/kotlin/com/example/messing/repository`
+6. `src/main/kotlin/com/example/messing/service`
+7. `src/main/kotlin/com/example/messing/controller`
+8. `src/main/kotlin/com/example/messing/dto`
+9. `src/main/kotlin/com/example/messing/exception`
 
-## Notes
+## Ghi chú
 
-- Keep controller logic thin.
-- Put business rules in services.
-- Keep DTOs separate from entities.
-- Validate file upload and websocket state carefully.
-- Use the global exception handler to keep API errors consistent.
+- Voice state hiện được lưu in-memory, nên sẽ reset khi backend restart.
+- Một số tính năng realtime phụ thuộc vào đúng cấu hình JWT, LiveKit và WebSocket origin.
+- Nếu bạn triển khai production, hãy rà lại CORS, allowed origins và cấu hình upload/public URL.

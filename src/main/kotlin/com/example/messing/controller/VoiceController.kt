@@ -1,6 +1,7 @@
 package com.example.messing.controller
 
 import com.example.messing.dto.voice.*
+import com.example.messing.exception.ResourceNotFoundException
 import com.example.messing.repository.UserRepository
 import com.example.messing.service.*
 import org.springframework.web.bind.annotation.*
@@ -17,14 +18,10 @@ class VoiceController(
     private val voiceChannelStateService: VoiceChannelStateService,
     private val voiceStateBroadcaster: VoiceStateBroadcaster
 ) {
-    // POST /api/voice/join
-    // Client gọi khi muốn vào voice channel. Trả về token LiveKit + state.
-    // Nếu wantMic = false hoặc user từ chối mic -> listenOnly = true, vẫn join được.
     @PostMapping("/join")
     fun joinVoice(@RequestBody request: JoinVoiceRequest, principal: Principal): JoinVoiceResponse {
-        val user = userRepository.findByEmailOrUsername(principal.name, principal.name)
-            ?: throw IllegalArgumentException("User not found")
-        val userId = user.id ?: throw IllegalArgumentException("User id not found")
+        val user = resolveCurrentUser(principal)
+        val userId = user.id ?: throw ResourceNotFoundException("User id not found")
 
         voiceAuthorizationService.assertCanJoinVoice(userId, request.channelId)
 
@@ -60,13 +57,10 @@ class VoiceController(
         )
     }
 
-    // POST /api/voice/leave
-    // Rời voice channel, backend cập nhật state và broadcast.
     @PostMapping("/leave")
     fun leaveVoice(@RequestBody request: LeaveVoiceRequest, principal: Principal): VoiceChannelStateDTO {
-        val user = userRepository.findByEmailOrUsername(principal.name, principal.name)
-            ?: throw IllegalArgumentException("User not found")
-        val userId = user.id ?: throw IllegalArgumentException("User id not found")
+        val user = resolveCurrentUser(principal)
+        val userId = user.id ?: throw ResourceNotFoundException("User id not found")
 
         voiceParticipantService.markParticipantLeft(userId, request.sessionId)
 
@@ -80,16 +74,13 @@ class VoiceController(
         return channelState
     }
 
-    // POST /api/voice/mic
-    // Bật/tắt mic sau khi đã join. Cập nhật role speaker/listener tương ứng.
     @PostMapping("/mic")
     fun toggleMic(@RequestBody request: ToggleMicRequest, principal: Principal): VoiceParticipantStateDTO {
-        val user = userRepository.findByEmailOrUsername(principal.name, principal.name)
-            ?: throw IllegalArgumentException("User not found")
-        val userId = user.id ?: throw IllegalArgumentException("User id not found")
+        val user = resolveCurrentUser(principal)
+        val userId = user.id ?: throw ResourceNotFoundException("User id not found")
 
         val participant = voiceParticipantService.markMicEnabled(userId, request.sessionId, request.enabled)
-            ?: throw IllegalArgumentException("Participant state not found")
+            ?: throw ResourceNotFoundException("Participant state not found")
 
         val channelState = voiceChannelStateService.buildChannelState(request.channelId)
         voiceStateBroadcaster.broadcastStateChanged(channelState)
@@ -97,13 +88,10 @@ class VoiceController(
         return voiceChannelStateService.toParticipantDTO(participant)
     }
 
-    // POST /api/voice/screen-share
-    // Bật/tắt screen share trong cùng voice session.
     @PostMapping("/screen-share")
     fun toggleScreenShare(@RequestBody request: ScreenShareRequest, principal: Principal): VoiceParticipantStateDTO {
-        val user = userRepository.findByEmailOrUsername(principal.name, principal.name)
-            ?: throw IllegalArgumentException("User not found")
-        val userId = user.id ?: throw IllegalArgumentException("User id not found")
+        val user = resolveCurrentUser(principal)
+        val userId = user.id ?: throw ResourceNotFoundException("User id not found")
 
         voiceAuthorizationService.assertCanJoinVoice(userId, request.channelId)
 
@@ -113,7 +101,7 @@ class VoiceController(
             enabled = request.enabled,
             trackSid = request.trackSid,
             source = request.source,
-        ) ?: throw IllegalArgumentException("Participant state not found")
+        ) ?: throw ResourceNotFoundException("Participant state not found")
 
         val channelState = voiceChannelStateService.buildChannelState(request.channelId)
         voiceStateBroadcaster.broadcastStateChanged(channelState)
@@ -121,10 +109,12 @@ class VoiceController(
         return voiceChannelStateService.toParticipantDTO(participant)
     }
 
-    // GET /api/voice/state/{channelId}
-    // Lấy snapshot toàn bộ state của channel để render UI.
     @GetMapping("/state/{channelId}")
     fun getVoiceState(@PathVariable channelId: String): VoiceStateResponse {
         return voiceChannelStateService.buildSessionState(channelId)
     }
+
+    private fun resolveCurrentUser(principal: Principal) =
+        userRepository.findByEmailOrUsername(principal.name, principal.name)
+            ?: throw ResourceNotFoundException("User not found")
 }

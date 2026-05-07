@@ -9,6 +9,7 @@ import com.example.messing.repository.ChannelRepository
 import com.example.messing.repository.MessageRepository
 import com.example.messing.repository.UserRepository
 import com.example.messing.service.FileStorageService
+import com.example.messing.service.MessageMapper
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
@@ -30,7 +31,8 @@ class MessageRestController(
     private val userRepository: UserRepository,
     private val channelRepository: ChannelRepository,
     private val fileStorageService: FileStorageService,
-    private val messagingTemplate: SimpMessagingTemplate
+    private val messagingTemplate: SimpMessagingTemplate,
+    private val messageMapper: MessageMapper
 ) {
 
     @GetMapping("/{channelId}/messages")
@@ -43,21 +45,7 @@ class MessageRestController(
         val messagesPage = messageRepository.findByChannelIdOrderByCreatedAtDesc(channelId, pageable)
 
         val responsePage = messagesPage.map { message ->
-            val sender = message.sender ?: throw ResourceNotFoundException("Sender not found for message ${message.id}")
-            val channel = message.channel ?: throw ResourceNotFoundException("Channel not found for message ${message.id}")
-
-            ChatMessageResponse(
-                id = message.id ?: throw IllegalStateException("Message id is null"),
-                channelId = channel.id ?: channelId,
-                content = message.content,
-                type = message.type,
-                createdAt = message.createdAt,
-                senderId = sender.id ?: throw IllegalStateException("Sender id is null"),
-                senderUsername = sender.username,
-                senderDisplayName = sender.displayName?.takeIf { it.isNotBlank() } ?: sender.username,
-                senderAvatarUrl = sender.avatarUrl,
-                metadata = null
-            )
+            messageMapper.toResponse(message)
         }
 
         return ResponseEntity.ok(responsePage)
@@ -88,18 +76,7 @@ class MessageRestController(
             )
         )
 
-        val response = ChatMessageResponse(
-            id = savedMessage.id ?: throw IllegalStateException("Saved message id is null"),
-            channelId = channel.id ?: channelId,
-            content = savedMessage.content,
-            type = savedMessage.type,
-            createdAt = savedMessage.createdAt,
-            senderId = sender.id ?: throw IllegalStateException("Sender id is null"),
-            senderUsername = sender.username,
-            senderDisplayName = sender.displayName?.takeIf { it.isNotBlank() } ?: sender.username,
-            senderAvatarUrl = sender.avatarUrl,
-            metadata = null
-        )
+        val response = messageMapper.toResponse(savedMessage, sender, channelId)
 
         messagingTemplate.convertAndSend("/topic/channels/$channelId", response)
 

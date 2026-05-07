@@ -1,6 +1,8 @@
 package com.example.messing.service
 
 import com.example.messing.entity.ChannelType
+import com.example.messing.exception.BadRequestException
+import com.example.messing.exception.ResourceNotFoundException
 import com.example.messing.repository.ChannelRepository
 import com.example.messing.repository.ServerMemberRepository
 import org.springframework.stereotype.Service
@@ -12,18 +14,18 @@ class VoiceAuthorizationService(
 ) {
     fun assertCanJoinVoice(userId: String, channelId: String) {
         val channel = channelRepository.findById(channelId).orElseThrow {
-            IllegalArgumentException("Channel not found")
+            ResourceNotFoundException("Channel not found")
         }
 
         if (channel.type != ChannelType.VOICE) {
-            throw IllegalArgumentException("Channel is not a voice channel")
+            throw BadRequestException("Channel is not a voice channel")
         }
 
         val serverId = channel.server?.id
-            ?: throw IllegalArgumentException("Server not found")
+            ?: throw ResourceNotFoundException("Server not found")
 
         if (!serverMemberRepository.existsByUserIdAndServerId(userId, serverId)) {
-            throw IllegalArgumentException("You do not have permission to join this voice channel")
+            throw BadRequestException("You do not have permission to join this voice channel")
         }
     }
 }

@@ -23,31 +23,20 @@ class AuthService(
 ) {
 
     fun register(request: RegisterRequest): AuthResponse {
-        if (userRepository.existsByEmail(request.email)) {
-            throw BadRequestException("Email already exists")
-        }
-        if (userRepository.existsByUsername(request.username)) {
-            throw BadRequestException("Username already exists")
-        }
+        ensureUniqueRegistration(request.email, request.username)
 
+        val encodedPassword = requireNotNull(passwordEncoder.encode(request.password.trim())) {
+            "Password encoding failed"
+        }
         val user = User(
-            username = request.username,
-            displayName = request.displayName,
-            email = request.email,
-            password = passwordEncoder.encode(request.password) ?: ""
+            username = request.username.trim(),
+            displayName = request.displayName?.trim().takeIf { !it.isNullOrBlank() },
+            email = request.email.trim(),
+            password = encodedPassword
         )
         val savedUser = userRepository.save(user)
 
-        val userDetails: UserDetails = userDetailsService.loadUserByUsername(savedUser.username)
-        val token = jwtUtil.generateToken(userDetails)
-
-        return AuthResponse(
-            token = token,
-            userId = savedUser.id!!,
-            username = savedUser.username,
-            displayName = savedUser.displayName?.takeIf { it.isNotBlank() },
-            email = savedUser.email
-        )
+        return buildAuthResponse(savedUser)
     }
 
     fun login(request: LoginRequest): AuthResponse {
@@ -56,12 +45,29 @@ class AuthService(
         )
 
         val user = userRepository.findByEmailOrUsername(request.identifier, request.identifier)
-            ?: throw BadRequestException("Invalid credentials")
+            ?: throw invalidCredentials()
 
         if (user.isVirtual) {
-            throw BadRequestException("Invalid credentials")
+            throw invalidCredentials()
         }
 
+        return buildAuthResponse(user)
+    }
+
+    private fun ensureUniqueRegistration(email: String, username: String) {
+        if (userRepository.existsByEmail(email)) {
+            throw BadRequestException("Email already exists")
+        }
+        if (userRepository.existsByUsername(username)) {
+            throw BadRequestException("Username already exists")
+        }
+    }
+
+    private fun invalidCredentials(): BadRequestException {
+        return BadRequestException("Invalid credentials")
+    }
+
+    private fun buildAuthResponse(user: User): AuthResponse {
         val userDetails: UserDetails = userDetailsService.loadUserByUsername(user.username)
         val token = jwtUtil.generateToken(userDetails)
 

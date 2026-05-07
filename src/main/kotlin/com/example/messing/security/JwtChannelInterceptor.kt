@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class JwtChannelInterceptor(
-        private val jwtUtil: JwtUtil,
-        private val customUserDetailsService: CustomUserDetailsService
+    private val jwtUtil: JwtUtil,
+    private val customUserDetailsService: CustomUserDetailsService
 ) : ChannelInterceptor {
 
     companion object {
@@ -21,9 +21,8 @@ class JwtChannelInterceptor(
     }
 
     override fun preSend(message: Message<*>, channel: MessageChannel): Message<*>? {
-        val accessor =
-                MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor::class.java)
-                        ?: return message
+        val accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor::class.java)
+            ?: return message
 
         if (accessor.command != StompCommand.CONNECT) {
             val sessionUser = accessor.sessionAttributes?.get(SESSION_USER_KEY)
@@ -34,9 +33,8 @@ class JwtChannelInterceptor(
             return message
         }
 
-        val rawAuthHeader =
-                accessor.getFirstNativeHeader("X-Authorization")
-                        ?: accessor.getFirstNativeHeader("Authorization") ?: return message
+        val rawAuthHeader = accessor.getFirstNativeHeader("X-Authorization")
+            ?: accessor.getFirstNativeHeader("Authorization") ?: return message
 
         val token = rawAuthHeader.removePrefix("Bearer ").trim()
         if (token.isBlank()) {
@@ -51,8 +49,7 @@ class JwtChannelInterceptor(
                 return message
             }
 
-            val authentication =
-                    UsernamePasswordAuthenticationToken(userDetails, null, userDetails.authorities)
+            val authentication = UsernamePasswordAuthenticationToken(userDetails, null, userDetails.authorities)
             accessor.user = authentication
             accessor.sessionAttributes?.put(SESSION_USER_KEY, authentication)
 
